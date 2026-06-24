@@ -2,7 +2,8 @@
 
 Interactive replay and analysis for Garmin FIT activity files (SUP / paddling profile).
 
-**Repo:** https://github.com/jchiu1303/garmin-analysis (public)
+**Repo:** https://github.com/jchiu1303/garmin-analysis (public)  
+**Second brain:** [notes/second-brain-garmin-analysis.md](notes/second-brain-garmin-analysis.md)
 
 ## Privacy model
 
