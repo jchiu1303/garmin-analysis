@@ -143,7 +143,7 @@ def generate_html(points: list[dict], title: str, date_label: str) -> str:
 <div class="chart-wrap">
   <div class="chart-header">
     <h2>Speed over time</h2>
-    <span>Click chart to jump · synced with map</span>
+    <span>Space play/pause · ←→ step · 1–5 speed · click chart to jump</span>
   </div>
   <div class="chart-stage">
     <canvas id="speed-chart"></canvas>
@@ -353,7 +353,6 @@ let playing = false;
 let playbackRate = 1;
 let playStartWall = 0;
 let playStartElapsed = 0;
-let playStartProgress = 0;
 let rafId = null;
 let lastStatsIdx = -1;
 
@@ -398,24 +397,27 @@ function setPlaying(on) {{
   playBtn.title = on ? "Pause" : "Play";
 }}
 
+const SESSION_DURATION = POINTS[POINTS.length - 1].elapsed;
+const BASE_PLAY_SECONDS = 120; // 1× plays the full session in 2 minutes
+
+function elapsedNow() {{
+  const wallSec = (performance.now() - playStartWall) / 1000 * playbackRate;
+  return Math.min(SESSION_DURATION, playStartElapsed + (wallSec / BASE_PLAY_SECONDS) * SESSION_DURATION);
+}}
+
 function pause() {{
   if (playing) {{
-    const wallSec = (performance.now() - playStartWall) / 1000 * playbackRate;
-    const progress = Math.min(1, playStartProgress + (wallSec / BASE_PLAY_SECONDS));
-    slider.value = Math.round(progress * (POINTS.length - 1));
+    const state = stateAtElapsed(elapsedNow());
+    slider.value = state.idx;
+    applyState(state, false);
   }}
   if (rafId) cancelAnimationFrame(rafId);
   rafId = null;
   setPlaying(false);
 }}
 
-const SESSION_DURATION = POINTS[POINTS.length - 1].elapsed;
-const BASE_PLAY_SECONDS = 120; // 1× plays the full session in 2 minutes
-
 function syncPlayAnchor() {{
-  const progress = +slider.value / (POINTS.length - 1);
-  playStartProgress = progress;
-  playStartElapsed = progress * SESSION_DURATION;
+  playStartElapsed = playing ? elapsedNow() : POINTS[+slider.value].elapsed;
   playStartWall = performance.now();
 }}
 
@@ -429,14 +431,13 @@ function setPlaybackRate(rate) {{
 
 function tick() {{
   if (!playing) return;
-  const wallSec = (performance.now() - playStartWall) / 1000 * playbackRate;
-  const progress = Math.min(1, playStartProgress + (wallSec / BASE_PLAY_SECONDS));
-  if (progress >= 1) {{
+  const elapsed = elapsedNow();
+  if (elapsed >= SESSION_DURATION) {{
     pause();
     update(POINTS.length - 1);
     return;
   }}
-  applyState(stateAtElapsed(progress * SESSION_DURATION), false);
+  applyState(stateAtElapsed(elapsed), false);
   rafId = requestAnimationFrame(tick);
 }}
 
@@ -444,11 +445,9 @@ function play() {{
   if (+slider.value >= POINTS.length - 1) {{
     slider.value = 0;
     update(0);
-    playStartProgress = 0;
     playStartElapsed = 0;
   }} else {{
-    playStartProgress = +slider.value / (POINTS.length - 1);
-    playStartElapsed = playStartProgress * SESSION_DURATION;
+    playStartElapsed = POINTS[+slider.value].elapsed;
   }}
   playStartWall = performance.now();
   lastStatsIdx = -1;
@@ -479,6 +478,33 @@ window.addEventListener("resize", () => {{
   chartGeom();
   moveChartCursor(+slider.value / (POINTS.length - 1), POINTS[+slider.value].speed);
 }});
+
+const SPEED_KEYS = {{ "1": 0.25, "2": 0.5, "3": 1, "4": 2, "5": 4 }};
+
+function scrubTo(idx) {{
+  const i = Math.max(0, Math.min(POINTS.length - 1, idx));
+  pause();
+  slider.value = i;
+  update(i);
+}}
+
+document.addEventListener("keydown", e => {{
+  if (e.target.matches("input, textarea, select")) return;
+  if (e.code === "Space") {{
+    e.preventDefault();
+    playing ? pause() : play();
+  }} else if (e.code === "ArrowLeft") {{
+    e.preventDefault();
+    scrubTo(+slider.value - 1);
+  }} else if (e.code === "ArrowRight") {{
+    e.preventDefault();
+    scrubTo(+slider.value + 1);
+  }} else if (SPEED_KEYS[e.key]) {{
+    e.preventDefault();
+    setPlaybackRate(SPEED_KEYS[e.key]);
+  }}
+}});
+
 chartGeom();
 update(0);
 </script>

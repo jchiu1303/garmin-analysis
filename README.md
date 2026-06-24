@@ -49,6 +49,14 @@ Self-contained HTML file — share via email, Drive, or static hosting. Recipien
 - **Chart click** — jump map + stats to that moment
 - **Speed buttons** — change replay rate (can switch mid-play)
 
+### Keyboard shortcuts
+
+| Key | Action |
+|-----|--------|
+| Space | Play / pause |
+| ← → | Step slider one GPS point |
+| 1–5 | Playback speed 0.25×, 0.5×, 1×, 2×, 4× |
+
 ### Sharing
 
 The repo publishes **`demo/replay.html`** only — a synthetic route for showing how the viewer works.
