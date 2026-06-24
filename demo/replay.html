@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dragon Boat Replay (Demo)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #1a1a2e; color: #eee; height: 100vh; display: flex; flex-direction: column; }
+  header { padding: 12px 20px; background: #16213e; border-bottom: 1px solid #0f3460; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  header h1 { font-size: 16px; font-weight: 600; }
+  header span { font-size: 13px; color: #94a3b8; }
+  .map-wrap { flex: 1; min-height: 0; position: relative; }
+  #map { width: 100%; height: 100%; }
+  .chart-wrap { background: #16213e; border-top: 1px solid #0f3460; padding: 12px 20px 8px; }
+  .chart-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .chart-header h2 { font-size: 13px; font-weight: 600; color: #eee; }
+  .chart-header span { font-size: 11px; color: #94a3b8; }
+  .chart-stage { position: relative; }
+  #speed-chart { width: 100%; height: 160px; display: block; cursor: crosshair; }
+  #chart-cursor { position: absolute; top: 0; left: 0; width: 0; height: 100%; pointer-events: none; will-change: transform; }
+  .chart-cursor-line { position: absolute; top: 12px; bottom: 28px; left: -1px; width: 2px; background: #e94560; box-shadow: 0 0 6px rgba(233,69,96,0.5); }
+  .chart-cursor-dot { position: absolute; left: -5px; width: 10px; height: 10px; border-radius: 50%; background: #e94560; border: 2px solid #fff; box-shadow: 0 0 6px rgba(233,69,96,0.6); transform: translateY(-50%); }
+  .panel { background: #16213e; border-top: 1px solid #0f3460; padding: 16px 20px 20px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .stat { background: #1a1a2e; border-radius: 8px; padding: 12px; text-align: center; }
+  .stat .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat .value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+  .stat .unit { font-size: 12px; color: #64748b; }
+  .controls { display: flex; align-items: center; gap: 12px; }
+  .controls label { font-size: 12px; color: #94a3b8; min-width: 42px; }
+  #play-btn { width: 40px; height: 40px; border: none; border-radius: 50%; background: #e94560; color: #fff; font-size: 16px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  #play-btn:hover { background: #ff6b81; }
+  #play-btn:disabled { background: #475569; cursor: default; }
+  input[type=range] { flex: 1; -webkit-appearance: none; height: 6px; border-radius: 3px; background: #0f3460; outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #e94560; cursor: pointer; }
+  .speed-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+  .speed-row .label { font-size: 12px; color: #94a3b8; min-width: 52px; }
+  .speed-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .speed-btns button { padding: 6px 12px; border: 1px solid #0f3460; border-radius: 6px; background: #1a1a2e; color: #94a3b8; font-size: 12px; cursor: pointer; }
+  .speed-btns button:hover { border-color: #e94560; color: #eee; }
+  .speed-btns button.active { background: #e94560; border-color: #e94560; color: #fff; }
+  .boat-marker { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .speed-badge { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; background: rgba(22,33,62,0.95); border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.45); }
+  .dot-marker { background: #e94560; border: 3px solid #fff; border-radius: 50%; width: 16px; height: 16px; box-shadow: 0 0 8px rgba(233,69,96,0.6); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Dragon Boat Replay (Demo)</h1>
+  <span>Demo session · 10:00:00–10:40:00 HKT · 6.51 km</span>
+</header>
+<div class="map-wrap">
+  <div id="map"></div>
+</div>
+<div class="chart-wrap">
+  <div class="chart-header">
+    <h2>Speed over time</h2>
+    <span>Click chart to jump · synced with map</span>
+  </div>
+  <div class="chart-stage">
+    <canvas id="speed-chart"></canvas>
+    <div id="chart-cursor">
+      <div class="chart-cursor-line"></div>
+      <div class="chart-cursor-dot"></div>
+    </div>
+  </div>
+</div>
+<div class="panel">
+  <div class="stats">
+    <div class="stat"><div class="label">Time</div><div class="value" id="v-time">--:--:--</div></div>
+    <div class="stat"><div class="label">Speed</div><div class="value" id="v-speed">0.0</div><div class="unit">km/h</div></div>
+    <div class="stat"><div class="label">Stroke Rate</div><div class="value" id="v-cadence">—</div><div class="unit">spm</div></div>
+    <div class="stat"><div class="label">Distance</div><div class="value" id="v-dist">0.00</div><div class="unit">km</div></div>
+  </div>
+  <div class="controls">
+    <button id="play-btn" title="Play / Pause">▶</button>
+    <label>10:00:00</label>
+    <input type="range" id="slider" min="0" max="359" value="0" step="1">
+    <label>10:40:00</label>
+  </div>
+  <div class="speed-row">
+    <span class="label">Speed</span>
+    <div class="speed-btns" id="speed-btns">
+      <button data-rate="0.25">0.25×</button>
+      <button data-rate="0.5">0.5×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="2">2×</button>
+      <button data-rate="4">4×</button>
+    </div>
+  </div>
+</div>
+<script>
+const POINTS = [{"t": "10:00:00", "elapsed": 0.0, "lat": 22.324, "lon": 114.168, "speed": 3.0, "cadence": 38, "distance": 0.0}, {"t": "10:00:06", "elapsed": 6.7, "lat": 22.323999, "lon": 114.16821, "speed": 3.55, "cadence": 38, "distance": 21.6}, {"t": "10:00:13", "elapsed": 13.4, "lat": 22.323995, "lon": 114.16842, "speed": 4.11, "cadence": 38, "distance": 43.1}, {"t": "10:00:20", "elapsed": 20.1, "lat": 22.323988, "lon": 114.16863, "speed": 4.65, "cadence": 39, "distance": 64.7}, {"t": "10:00:26", "elapsed": 26.7, "lat": 22.323979, "lon": 114.168839, "speed": 5.2, "cadence": 39, "distance": 86.2}, {"t": "10:00:33", "elapsed": 33.4, "lat": 22.323967, "lon": 114.169048, "speed": 5.73, "cadence": 40, "distance": 107.7}, {"t": "10:00:40", "elapsed": 40.1, "lat": 22.323952, "lon": 114.169257, "speed": 6.26, "cadence": 40, "distance": 129.2}, {"t": "10:00:46", "elapsed": 46.8, "lat": 22.323935, "lon": 114.169465, "speed": 6.78, "cadence": 41, "distance": 150.6}, {"t": "10:00:53", "elapsed": 53.5, "lat": 22.323916, "lon": 114.169672, "speed": 7.28, "cadence": 41, "distance": 172.0}, {"t": "10:01:00", "elapsed": 60.2, "lat": 22.323893, "lon": 114.169879, "speed": 7.77, "cadence": 42, "distance": 193.4}, {"t": "10:01:06", "elapsed": 66.9, "lat": 22.323868, "lon": 114.170085, "speed": 8.25, "cadence": 42, "distance": 214.7}, {"t": "10:01:13", "elapsed": 73.5, "lat": 22.323841, "lon": 114.17029, "speed": 8.71, "cadence": 42, "distance": 236.0}, {"t": "10:01:20", "elapsed": 80.2, "lat": 22.32381, "lon": 114.170494, "speed": 9.15, "cadence": 43, "distance": 257.1}, {"t": "10:01:26", "elapsed": 86.9, "lat": 22.323778, "lon": 114.170697, "speed": 9.57, "cadence": 43, "distance": 278.2}, {"t": "10:01:33", "elapsed": 93.6, "lat": 22.323742, "lon": 114.170898, "speed": 9.98, "cadence": 44, "distance": 299.3}, {"t": "10:01:40", "elapsed": 100.3, "lat": 22.323705, "lon": 114.171098, "speed": 10.36, "cadence": 44, "distance": 320.3}, {"t": "10:01:46", "elapsed": 107.0, "lat": 22.323664, "lon": 114.171297, "speed": 10.71, "cadence": 44, "distance": 341.2}, {"t": "10:01:53", "elapsed": 113.6, "lat": 22.323622, "lon": 114.171495, "speed": 11.04, "cadence": 45, "distance": 362.1}, {"t": "10:02:00", "elapsed": 120.3, "lat": 22.323576, "lon": 114.171691, "speed": 11.35, "cadence": 45, "distance": 382.9}, {"t": "10:02:07", "elapsed": 127.0, "lat": 22.323529, "lon": 114.171885, "speed": 11.63, "cadence": 45, "distance": 403.5}, {"t": "10:02:13", "elapsed": 133.7, "lat": 22.323478, "lon": 114.172078, "speed": 11.89, "cadence": 46, "distance": 424.1}, {"t": "10:02:20", "elapsed": 140.4, "lat": 22.323426, "lon": 114.172269, "speed": 12.11, "cadence": 46, "distance": 444.5}, {"t": "10:02:27", "elapsed": 147.1, "lat": 22.323371, "lon": 114.172458, "speed": 12.31, "cadence": 46, "distance": 464.9}, {"t": "10:02:33", "elapsed": 153.8, "lat": 22.323313, "lon": 114.172645, "speed": 12.48, "cadence": 47, "distance": 485.1}, {"t": "10:02:40", "elapsed": 160.4, "lat": 22.323254, "lon": 114.17283, "speed": 12.62, "cadence": 47, "distance": 505.2}, {"t": "10:02:47", "elapsed": 167.1, "lat": 22.323192, "lon": 114.173013, "speed": 12.72, "cadence": 47, "distance": 525.2}, {"t": "10:02:53", "elapsed": 173.8, "lat": 22.323127, "lon": 114.173193, "speed": 12.8, "cadence": 47, "distance": 545.0}, {"t": "10:03:00", "elapsed": 180.5, "lat": 22.323061, "lon": 114.173372, "speed": 12.85, "cadence": 48, "distance": 564.8}, {"t": "10:03:07", "elapsed": 187.2, "lat": 22.322992, "lon": 114.173548, "speed": 12.87, "cadence": 48, "distance": 584.3}, {"t": "10:03:13", "elapsed": 193.9, "lat": 22.322921, "lon": 114.173721, "speed": 12.86, "cadence": 48, "distance": 603.8}, {"t": "10:03:20", "elapsed": 200.6, "lat": 22.322848, "lon": 114.173892, "speed": 12.81, "cadence": 48, "distance": 623.1}, {"t": "10:03:27", "elapsed": 207.2, "lat": 22.322773, "lon": 114.17406, "speed": 12.74, "cadence": 49, "distance": 642.3}, {"t": "10:03:33", "elapsed": 213.9, "lat": 22.322695, "lon": 114.174226, "speed": 12.64, "cadence": 49, "distance": 661.4}, {"t": "10:03:40", "elapsed": 220.6, "lat": 22.322616, "lon": 114.174389, "speed": 12.51, "cadence": 49, "distance": 680.4}, {"t": "10:03:47", "elapsed": 227.3, "lat": 22.322534, "lon": 114.174549, "speed": 12.34, "cadence": 49, "distance": 699.1}, {"t": "10:03:53", "elapsed": 234.0, "lat": 22.322451, "lon": 114.174706, "speed": 12.15, "cadence": 49, "distance": 717.8}, {"t": "10:04:00", "elapsed": 240.7, "lat": 22.322365, "lon": 114.174861, "speed": 11.94, "cadence": 49, "distance": 736.3}, {"t": "10:04:07", "elapsed": 247.4, "lat": 22.322278, "lon": 114.175012, "speed": 11.69, "cadence": 49, "distance": 754.6}, {"t": "10:04:14", "elapsed": 254.0, "lat": 22.322188, "lon": 114.17516, "speed": 11.42, "cadence": 49, "distance": 772.8}, {"t": "10:04:20", "elapsed": 260.7, "lat": 22.322097, "lon": 114.175305, "speed": 11.13, "cadence": 49, "distance": 790.8}, {"t": "10:04:27", "elapsed": 267.4, "lat": 22.322004, "lon": 114.175447, "speed": 10.81, "cadence": 49, "distance": 808.6}, {"t": "10:04:34", "elapsed": 274.1, "lat": 22.32191, "lon": 114.175586, "speed": 10.46, "cadence": 49, "distance": 826.3}, {"t": "10:04:40", "elapsed": 280.8, "lat": 22.321813, "lon": 114.175721, "speed": 10.1, "cadence": 49, "distance": 843.8}, {"t": "10:04:47", "elapsed": 287.5, "lat": 22.321715, "lon": 114.175852, "speed": 9.71, "cadence": 49, "distance": 861.1}, {"t": "10:04:54", "elapsed": 294.2, "lat": 22.321615, "lon": 114.175981, "speed": 9.31, "cadence": 49, "distance": 878.4}, {"t": "10:05:00", "elapsed": 300.8, "lat": 22.321514, "lon": 114.176106, "speed": 8.89, "cadence": 49, "distance": 895.4}, {"t": "10:05:07", "elapsed": 307.5, "lat": 22.321411, "lon": 114.176227, "speed": 8.45, "cadence": 49, "distance": 912.2}, {"t": "10:05:14", "elapsed": 314.2, "lat": 22.321307, "lon": 114.176344, "speed": 7.99, "cadence": 49, "distance": 928.9}, {"t": "10:05:20", "elapsed": 320.9, "lat": 22.321201, "lon": 114.176458, "speed": 7.52, "cadence": 49, "distance": 945.6}, {"t": "10:05:27", "elapsed": 327.6, "lat": 22.321093, "lon": 114.176568, "speed": 7.04, "cadence": 49, "distance": 962.0}, {"t": "10:05:34", "elapsed": 334.3, "lat": 22.320985, "lon": 114.176675, "speed": 6.55, "cadence": 49, "distance": 978.3}, {"t": "10:05:40", "elapsed": 340.9, "lat": 22.320875, "lon": 114.176777, "speed": 6.05, "cadence": 49, "distance": 994.4}, {"t": "10:05:47", "elapsed": 347.6, "lat": 22.320764, "lon": 114.176876, "speed": 5.54, "cadence": 49, "distance": 1010.4}, {"t": "10:05:54", "elapsed": 354.3, "lat": 22.320651, "lon": 114.176971, "speed": 5.03, "cadence": 48, "distance": 1026.3}, {"t": "10:06:01", "elapsed": 361.0, "lat": 22.320538, "lon": 114.177062, "speed": 4.51, "cadence": 48, "distance": 1042.0}, {"t": "10:06:07", "elapsed": 367.7, "lat": 22.320423, "lon": 114.177148, "speed": 3.99, "cadence": 48, "distance": 1057.5}, {"t": "10:06:14", "elapsed": 374.4, "lat": 22.320307, "lon": 114.177231, "speed": 3.47, "cadence": 48, "distance": 1073.0}, {"t": "10:06:21", "elapsed": 381.1, "lat": 22.32019, "lon": 114.17731, "speed": 2.95, "cadence": 48, "distance": 1088.3}, {"t": "10:06:27", "elapsed": 387.7, "lat": 22.320072, "lon": 114.177385, "speed": 2.43, "cadence": 47, "distance": 1103.4}, {"t": "10:06:34", "elapsed": 394.4, "lat": 22.319954, "lon": 114.177455, "speed": 1.91, "cadence": 0, "distance": 1118.4}, {"t": "10:06:41", "elapsed": 401.1, "lat": 22.319834, "lon": 114.177521, "speed": 1.54, "cadence": 0, "distance": 1133.3}, {"t": "10:06:47", "elapsed": 407.8, "lat": 22.319714, "lon": 114.177583, "speed": 1.88, "cadence": 0, "distance": 1148.1}, {"t": "10:06:54", "elapsed": 414.5, "lat": 22.319593, "lon": 114.177641, "speed": 2.22, "cadence": 46, "distance": 1162.9}, {"t": "10:07:01", "elapsed": 421.2, "lat": 22.319471, "lon": 114.177695, "speed": 2.57, "cadence": 46, "distance": 1177.5}, {"t": "10:07:07", "elapsed": 427.9, "lat": 22.319348, "lon": 114.177744, "speed": 2.92, "cadence": 45, "distance": 1192.1}, {"t": "10:07:14", "elapsed": 434.5, "lat": 22.319225, "lon": 114.177789, "speed": 3.28, "cadence": 45, "distance": 1206.5}, {"t": "10:07:21", "elapsed": 441.2, "lat": 22.319102, "lon": 114.17783, "speed": 3.63, "cadence": 45, "distance": 1220.8}, {"t": "10:07:27", "elapsed": 447.9, "lat": 22.318977, "lon": 114.177866, "speed": 3.99, "cadence": 44, "distance": 1235.1}, {"t": "10:07:34", "elapsed": 454.6, "lat": 22.318853, "lon": 114.177898, "speed": 4.35, "cadence": 44, "distance": 1249.3}, {"t": "10:07:41", "elapsed": 461.3, "lat": 22.318728, "lon": 114.177926, "speed": 4.71, "cadence": 44, "distance": 1263.4}, {"t": "10:07:47", "elapsed": 468.0, "lat": 22.318603, "lon": 114.177949, "speed": 5.07, "cadence": 43, "distance": 1277.5}, {"t": "10:07:54", "elapsed": 474.7, "lat": 22.318477, "lon": 114.177968, "speed": 5.43, "cadence": 43, "distance": 1291.6}, {"t": "10:08:01", "elapsed": 481.3, "lat": 22.318352, "lon": 114.177983, "speed": 5.78, "cadence": 42, "distance": 1305.6}, {"t": "10:08:08", "elapsed": 488.0, "lat": 22.318226, "lon": 114.177993, "speed": 6.13, "cadence": 42, "distance": 1319.7}, {"t": "10:08:14", "elapsed": 494.7, "lat": 22.3181, "lon": 114.177999, "speed": 6.47, "cadence": 42, "distance": 1333.7}, {"t": "10:08:21", "elapsed": 501.4, "lat": 22.317974, "lon": 114.178, "speed": 6.81, "cadence": 41, "distance": 1347.7}, {"t": "10:08:28", "elapsed": 508.1, "lat": 22.317848, "lon": 114.177997, "speed": 7.14, "cadence": 41, "distance": 1361.8}, {"t": "10:08:34", "elapsed": 514.8, "lat": 22.317722, "lon": 114.177989, "speed": 7.46, "cadence": 40, "distance": 1375.8}, {"t": "10:08:41", "elapsed": 521.4, "lat": 22.317596, "lon": 114.177977, "speed": 7.77, "cadence": 40, "distance": 1389.8}, {"t": "10:08:48", "elapsed": 528.1, "lat": 22.31747, "lon": 114.177961, "speed": 8.07, "cadence": 39, "distance": 1403.9}, {"t": "10:08:54", "elapsed": 534.8, "lat": 22.317345, "lon": 114.17794, "speed": 8.37, "cadence": 39, "distance": 1417.9}, {"t": "10:09:01", "elapsed": 541.5, "lat": 22.31722, "lon": 114.177915, "speed": 8.64, "cadence": 38, "distance": 1432.0}, {"t": "10:09:08", "elapsed": 548.2, "lat": 22.317095, "lon": 114.177886, "speed": 8.91, "cadence": 38, "distance": 1446.2}, {"t": "10:09:14", "elapsed": 554.9, "lat": 22.316971, "lon": 114.177852, "speed": 9.16, "cadence": 38, "distance": 1460.4}, {"t": "10:09:21", "elapsed": 561.6, "lat": 22.316847, "lon": 114.177814, "speed": 9.4, "cadence": 38, "distance": 1474.8}, {"t": "10:09:28", "elapsed": 568.2, "lat": 22.316723, "lon": 114.177771, "speed": 9.62, "cadence": 38, "distance": 1489.2}, {"t": "10:09:34", "elapsed": 574.9, "lat": 22.316601, "lon": 114.177724, "speed": 9.83, "cadence": 39, "distance": 1503.6}, {"t": "10:09:41", "elapsed": 581.6, "lat": 22.316478, "lon": 114.177673, "speed": 10.02, "cadence": 39, "distance": 1518.2}, {"t": "10:09:48", "elapsed": 588.3, "lat": 22.316357, "lon": 114.177618, "speed": 10.19, "cadence": 40, "distance": 1532.8}, {"t": "10:09:54", "elapsed": 595.0, "lat": 22.316236, "lon": 114.177558, "speed": 10.34, "cadence": 40, "distance": 1547.5}, {"t": "10:10:01", "elapsed": 601.7, "lat": 22.316116, "lon": 114.177494, "speed": 10.47, "cadence": 41, "distance": 1562.4}, {"t": "10:10:08", "elapsed": 608.4, "lat": 22.315997, "lon": 114.177426, "speed": 10.59, "cadence": 41, "distance": 1577.4}, {"t": "10:10:15", "elapsed": 615.0, "lat": 22.315878, "lon": 114.177354, "speed": 10.68, "cadence": 41, "distance": 1592.5}, {"t": "10:10:21", "elapsed": 621.7, "lat": 22.315761, "lon": 114.177278, "speed": 10.75, "cadence": 42, "distance": 1607.6}, {"t": "10:10:28", "elapsed": 628.4, "lat": 22.315645, "lon": 114.177197, "speed": 10.8, "cadence": 42, "distance": 1623.0}, {"t": "10:10:35", "elapsed": 635.1, "lat": 22.315529, "lon": 114.177113, "speed": 10.83, "cadence": 43, "distance": 1638.5}, {"t": "10:10:41", "elapsed": 641.8, "lat": 22.315415, "lon": 114.177024, "speed": 10.84, "cadence": 43, "distance": 1654.1}, {"t": "10:10:48", "elapsed": 648.5, "lat": 22.315302, "lon": 114.176932, "speed": 10.83, "cadence": 44, "distance": 1669.8}, {"t": "10:10:55", "elapsed": 655.2, "lat": 22.31519, "lon": 114.176835, "speed": 10.79, "cadence": 44, "distance": 1685.7}, {"t": "10:11:01", "elapsed": 661.8, "lat": 22.315079, "lon": 114.176735, "speed": 10.73, "cadence": 44, "distance": 1701.7}, {"t": "10:11:08", "elapsed": 668.5, "lat": 22.31497, "lon": 114.176631, "speed": 10.65, "cadence": 45, "distance": 1717.9}, {"t": "10:11:15", "elapsed": 675.2, "lat": 22.314862, "lon": 114.176523, "speed": 10.55, "cadence": 45, "distance": 1734.2}, {"t": "10:11:21", "elapsed": 681.9, "lat": 22.314755, "lon": 114.176411, "speed": 10.42, "cadence": 45, "distance": 1750.8}, {"t": "10:11:28", "elapsed": 688.6, "lat": 22.31465, "lon": 114.176296, "speed": 10.27, "cadence": 46, "distance": 1767.4}, {"t": "10:11:35", "elapsed": 695.3, "lat": 22.314546, "lon": 114.176177, "speed": 10.1, "cadence": 46, "distance": 1784.2}, {"t": "10:11:41", "elapsed": 701.9, "lat": 22.314444, "lon": 114.176054, "speed": 9.91, "cadence": 46, "distance": 1801.2}, {"t": "10:11:48", "elapsed": 708.6, "lat": 22.314343, "lon": 114.175928, "speed": 9.7, "cadence": 47, "distance": 1818.4}, {"t": "10:11:55", "elapsed": 715.3, "lat": 22.314244, "lon": 114.175798, "speed": 9.47, "cadence": 47, "distance": 1835.7}, {"t": "10:12:02", "elapsed": 722.0, "lat": 22.314146, "lon": 114.175665, "speed": 9.21, "cadence": 47, "distance": 1853.1}, {"t": "10:12:08", "elapsed": 728.7, "lat": 22.314051, "lon": 114.175528, "speed": 8.94, "cadence": 47, "distance": 1870.7}, {"t": "10:12:15", "elapsed": 735.4, "lat": 22.313957, "lon": 114.175388, "speed": 8.64, "cadence": 48, "distance": 1888.5}, {"t": "10:12:22", "elapsed": 742.1, "lat": 22.313864, "lon": 114.175245, "speed": 8.33, "cadence": 48, "distance": 1906.4}, {"t": "10:12:28", "elapsed": 748.7, "lat": 22.313774, "lon": 114.175099, "speed": 8.0, "cadence": 48, "distance": 1924.4}, {"t": "10:12:35", "elapsed": 755.4, "lat": 22.313686, "lon": 114.174949, "speed": 7.65, "cadence": 48, "distance": 1942.6}, {"t": "10:12:42", "elapsed": 762.1, "lat": 22.313599, "lon": 114.174797, "speed": 7.29, "cadence": 49, "distance": 1961.0}, {"t": "10:12:48", "elapsed": 768.8, "lat": 22.313514, "lon": 114.174641, "speed": 6.91, "cadence": 49, "distance": 1979.5}, {"t": "10:12:55", "elapsed": 775.5, "lat": 22.313432, "lon": 114.174483, "speed": 6.52, "cadence": 49, "distance": 1998.2}, {"t": "10:13:02", "elapsed": 782.2, "lat": 22.313351, "lon": 114.174321, "speed": 6.12, "cadence": 49, "distance": 2017.0}, {"t": "10:13:08", "elapsed": 788.9, "lat": 22.313272, "lon": 114.174157, "speed": 5.7, "cadence": 49, "distance": 2036.0}, {"t": "10:13:15", "elapsed": 795.5, "lat": 22.313196, "lon": 114.173991, "speed": 5.27, "cadence": 49, "distance": 2055.1}, {"t": "10:13:22", "elapsed": 802.2, "lat": 22.313121, "lon": 114.173821, "speed": 5.11, "cadence": 49, "distance": 2074.4}, {"t": "10:13:28", "elapsed": 808.9, "lat": 22.313049, "lon": 114.173649, "speed": 5.5, "cadence": 49, "distance": 2093.8}, {"t": "10:13:35", "elapsed": 815.6, "lat": 22.312979, "lon": 114.173474, "speed": 5.89, "cadence": 49, "distance": 2113.3}, {"t": "10:13:42", "elapsed": 822.3, "lat": 22.312911, "lon": 114.173298, "speed": 6.26, "cadence": 49, "distance": 2132.9}, {"t": "10:13:48", "elapsed": 829.0, "lat": 22.312845, "lon": 114.173118, "speed": 6.62, "cadence": 49, "distance": 2152.7}, {"t": "10:13:55", "elapsed": 835.7, "lat": 22.312782, "lon": 114.172937, "speed": 6.96, "cadence": 49, "distance": 2172.6}, {"t": "10:14:02", "elapsed": 842.3, "lat": 22.312721, "lon": 114.172753, "speed": 7.3, "cadence": 49, "distance": 2192.7}, {"t": "10:14:09", "elapsed": 849.0, "lat": 22.312662, "lon": 114.172567, "speed": 7.61, "cadence": 49, "distance": 2212.9}, {"t": "10:14:15", "elapsed": 855.7, "lat": 22.312606, "lon": 114.172379, "speed": 7.92, "cadence": 49, "distance": 2233.1}, {"t": "10:14:22", "elapsed": 862.4, "lat": 22.312552, "lon": 114.17219, "speed": 8.2, "cadence": 49, "distance": 2253.5}, {"t": "10:14:29", "elapsed": 869.1, "lat": 22.3125, "lon": 114.171998, "speed": 8.47, "cadence": 49, "distance": 2274.0}, {"t": "10:14:35", "elapsed": 875.8, "lat": 22.312451, "lon": 114.171805, "speed": 8.72, "cadence": 49, "distance": 2294.6}, {"t": "10:14:42", "elapsed": 882.5, "lat": 22.312404, "lon": 114.17161, "speed": 8.96, "cadence": 49, "distance": 2315.3}, {"t": "10:14:49", "elapsed": 889.1, "lat": 22.31236, "lon": 114.171413, "speed": 9.17, "cadence": 49, "distance": 2336.1}, {"t": "10:14:55", "elapsed": 895.8, "lat": 22.312318, "lon": 114.171215, "speed": 9.37, "cadence": 49, "distance": 2357.0}, {"t": "10:15:02", "elapsed": 902.5, "lat": 22.312279, "lon": 114.171015, "speed": 9.55, "cadence": 49, "distance": 2378.0}, {"t": "10:15:09", "elapsed": 909.2, "lat": 22.312243, "lon": 114.170814, "speed": 9.7, "cadence": 48, "distance": 2399.0}, {"t": "10:15:15", "elapsed": 915.9, "lat": 22.312208, "lon": 114.170612, "speed": 9.84, "cadence": 48, "distance": 2420.1}, {"t": "10:15:22", "elapsed": 922.6, "lat": 22.312177, "lon": 114.170409, "speed": 9.96, "cadence": 48, "distance": 2441.2}, {"t": "10:15:29", "elapsed": 929.2, "lat": 22.312148, "lon": 114.170204, "speed": 10.06, "cadence": 48, "distance": 2462.5}, {"t": "10:15:35", "elapsed": 935.9, "lat": 22.312121, "lon": 114.169999, "speed": 10.14, "cadence": 48, "distance": 2483.7}, {"t": "10:15:42", "elapsed": 942.6, "lat": 22.312097, "lon": 114.169793, "speed": 10.2, "cadence": 47, "distance": 2505.0}, {"t": "10:15:49", "elapsed": 949.3, "lat": 22.312076, "lon": 114.169586, "speed": 10.24, "cadence": 47, "distance": 2526.4}, {"t": "10:15:55", "elapsed": 956.0, "lat": 22.312057, "lon": 114.169378, "speed": 10.26, "cadence": 47, "distance": 2547.9}, {"t": "10:16:02", "elapsed": 962.7, "lat": 22.312041, "lon": 114.16917, "speed": 10.26, "cadence": 46, "distance": 2569.3}, {"t": "10:16:09", "elapsed": 969.4, "lat": 22.312028, "lon": 114.168961, "speed": 10.24, "cadence": 46, "distance": 2590.8}, {"t": "10:16:16", "elapsed": 976.0, "lat": 22.312017, "lon": 114.168752, "speed": 10.2, "cadence": 46, "distance": 2612.3}, {"t": "10:16:22", "elapsed": 982.7, "lat": 22.312009, "lon": 114.168542, "speed": 10.14, "cadence": 45, "distance": 2633.9}, {"t": "10:16:29", "elapsed": 989.4, "lat": 22.312003, "lon": 114.168332, "speed": 10.07, "cadence": 45, "distance": 2655.4}, {"t": "10:16:36", "elapsed": 996.1, "lat": 22.312, "lon": 114.168123, "speed": 9.97, "cadence": 45, "distance": 2676.9}, {"t": "10:16:42", "elapsed": 1002.8, "lat": 22.312, "lon": 114.167912, "speed": 9.86, "cadence": 44, "distance": 2698.5}, {"t": "10:16:49", "elapsed": 1009.5, "lat": 22.312003, "lon": 114.167703, "speed": 9.74, "cadence": 44, "distance": 2720.0}, {"t": "10:16:56", "elapsed": 1016.2, "lat": 22.312008, "lon": 114.167493, "speed": 9.59, "cadence": 44, "distance": 2741.6}, {"t": "10:17:02", "elapsed": 1022.8, "lat": 22.312015, "lon": 114.167283, "speed": 9.43, "cadence": 43, "distance": 2763.2}, {"t": "10:17:09", "elapsed": 1029.5, "lat": 22.312026, "lon": 114.167074, "speed": 9.26, "cadence": 43, "distance": 2784.7}, {"t": "10:17:16", "elapsed": 1036.2, "lat": 22.312039, "lon": 114.166865, "speed": 9.07, "cadence": 42, "distance": 2806.3}, {"t": "10:17:22", "elapsed": 1042.9, "lat": 22.312054, "lon": 114.166656, "speed": 8.86, "cadence": 42, "distance": 2827.8}, {"t": "10:17:29", "elapsed": 1049.6, "lat": 22.312073, "lon": 114.166449, "speed": 8.65, "cadence": 42, "distance": 2849.1}, {"t": "10:17:36", "elapsed": 1056.3, "lat": 22.312093, "lon": 114.166241, "speed": 8.42, "cadence": 41, "distance": 2870.6}, {"t": "10:17:42", "elapsed": 1063.0, "lat": 22.312117, "lon": 114.166035, "speed": 8.17, "cadence": 41, "distance": 2891.9}, {"t": "10:17:49", "elapsed": 1069.6, "lat": 22.312143, "lon": 114.16583, "speed": 7.92, "cadence": 40, "distance": 2913.2}, {"t": "10:17:56", "elapsed": 1076.3, "lat": 22.312172, "lon": 114.165625, "speed": 7.66, "cadence": 40, "distance": 2934.4}, {"t": "10:18:03", "elapsed": 1083.0, "lat": 22.312203, "lon": 114.165422, "speed": 7.39, "cadence": 39, "distance": 2955.6}, {"t": "10:18:09", "elapsed": 1089.7, "lat": 22.312237, "lon": 114.165219, "speed": 7.11, "cadence": 39, "distance": 2976.7}, {"t": "10:18:16", "elapsed": 1096.4, "lat": 22.312273, "lon": 114.165018, "speed": 6.82, "cadence": 38, "distance": 2997.7}, {"t": "10:18:23", "elapsed": 1103.1, "lat": 22.312312, "lon": 114.164818, "speed": 6.52, "cadence": 38, "distance": 3018.7}, {"t": "10:18:29", "elapsed": 1109.7, "lat": 22.312353, "lon": 114.16462, "speed": 6.22, "cadence": 38, "distance": 3039.5}, {"t": "10:18:36", "elapsed": 1116.4, "lat": 22.312397, "lon": 114.164423, "speed": 5.91, "cadence": 38, "distance": 3060.3}, {"t": "10:18:43", "elapsed": 1123.1, "lat": 22.312443, "lon": 114.164228, "speed": 5.6, "cadence": 38, "distance": 3081.0}, {"t": "10:18:49", "elapsed": 1129.8, "lat": 22.312492, "lon": 114.164034, "speed": 5.28, "cadence": 39, "distance": 3101.6}, {"t": "10:18:56", "elapsed": 1136.5, "lat": 22.312543, "lon": 114.163842, "speed": 4.96, "cadence": 39, "distance": 3122.1}, {"t": "10:19:03", "elapsed": 1143.2, "lat": 22.312597, "lon": 114.163652, "speed": 4.64, "cadence": 40, "distance": 3142.5}, {"t": "10:19:09", "elapsed": 1149.9, "lat": 22.312653, "lon": 114.163464, "speed": 4.32, "cadence": 40, "distance": 3162.8}, {"t": "10:19:16", "elapsed": 1156.5, "lat": 22.312711, "lon": 114.163278, "speed": 3.99, "cadence": 41, "distance": 3183.0}, {"t": "10:19:23", "elapsed": 1163.2, "lat": 22.312772, "lon": 114.163094, "speed": 3.67, "cadence": 41, "distance": 3203.1}, {"t": "10:19:29", "elapsed": 1169.9, "lat": 22.312835, "lon": 114.162912, "speed": 3.35, "cadence": 41, "distance": 3223.0}, {"t": "10:19:36", "elapsed": 1176.6, "lat": 22.3129, "lon": 114.162732, "speed": 3.03, "cadence": 42, "distance": 3242.8}, {"t": "10:19:43", "elapsed": 1183.3, "lat": 22.312968, "lon": 114.162555, "speed": 2.71, "cadence": 42, "distance": 3262.5}, {"t": "10:19:49", "elapsed": 1190.0, "lat": 22.313037, "lon": 114.16238, "speed": 2.39, "cadence": 43, "distance": 3282.1}, {"t": "10:19:56", "elapsed": 1196.7, "lat": 22.313109, "lon": 114.162207, "speed": 2.08, "cadence": 43, "distance": 3301.5}, {"t": "10:20:03", "elapsed": 1203.3, "lat": 22.313183, "lon": 114.162038, "speed": 2.19, "cadence": 43, "distance": 3320.8}, {"t": "10:20:10", "elapsed": 1210.0, "lat": 22.313259, "lon": 114.16187, "speed": 2.73, "cadence": 44, "distance": 3340.0}, {"t": "10:20:16", "elapsed": 1216.7, "lat": 22.313338, "lon": 114.161706, "speed": 3.27, "cadence": 44, "distance": 3359.0}, {"t": "10:20:23", "elapsed": 1223.4, "lat": 22.313418, "lon": 114.161544, "speed": 3.81, "cadence": 45, "distance": 3377.9}, {"t": "10:20:30", "elapsed": 1230.1, "lat": 22.3135, "lon": 114.161385, "speed": 4.35, "cadence": 45, "distance": 3396.6}, {"t": "10:20:36", "elapsed": 1236.8, "lat": 22.313585, "lon": 114.161229, "speed": 4.88, "cadence": 45, "distance": 3415.2}, {"t": "10:20:43", "elapsed": 1243.5, "lat": 22.313671, "lon": 114.161076, "speed": 5.41, "cadence": 46, "distance": 3433.6}, {"t": "10:20:50", "elapsed": 1250.1, "lat": 22.313759, "lon": 114.160926, "speed": 5.94, "cadence": 46, "distance": 3451.8}, {"t": "10:20:56", "elapsed": 1256.8, "lat": 22.313849, "lon": 114.160779, "speed": 6.46, "cadence": 46, "distance": 3469.9}, {"t": "10:21:03", "elapsed": 1263.5, "lat": 22.313941, "lon": 114.160635, "speed": 6.96, "cadence": 47, "distance": 3487.9}, {"t": "10:21:10", "elapsed": 1270.2, "lat": 22.314035, "lon": 114.160495, "speed": 7.46, "cadence": 47, "distance": 3505.7}, {"t": "10:21:16", "elapsed": 1276.9, "lat": 22.31413, "lon": 114.160358, "speed": 7.94, "cadence": 47, "distance": 3523.3}, {"t": "10:21:23", "elapsed": 1283.6, "lat": 22.314227, "lon": 114.160224, "speed": 8.41, "cadence": 47, "distance": 3540.8}, {"t": "10:21:30", "elapsed": 1290.3, "lat": 22.314326, "lon": 114.160094, "speed": 8.87, "cadence": 48, "distance": 3558.2}, {"t": "10:21:36", "elapsed": 1296.9, "lat": 22.314427, "lon": 114.159967, "speed": 9.3, "cadence": 48, "distance": 3575.3}, {"t": "10:21:43", "elapsed": 1303.6, "lat": 22.314529, "lon": 114.159843, "speed": 9.72, "cadence": 48, "distance": 3592.3}, {"t": "10:21:50", "elapsed": 1310.3, "lat": 22.314632, "lon": 114.159724, "speed": 10.12, "cadence": 48, "distance": 3609.1}, {"t": "10:21:56", "elapsed": 1317.0, "lat": 22.314737, "lon": 114.159608, "speed": 10.49, "cadence": 49, "distance": 3625.8}, {"t": "10:22:03", "elapsed": 1323.7, "lat": 22.314844, "lon": 114.159495, "speed": 10.85, "cadence": 49, "distance": 3642.4}, {"t": "10:22:10", "elapsed": 1330.4, "lat": 22.314952, "lon": 114.159387, "speed": 11.18, "cadence": 49, "distance": 3658.7}, {"t": "10:22:17", "elapsed": 1337.0, "lat": 22.315061, "lon": 114.159282, "speed": 11.48, "cadence": 49, "distance": 3674.9}, {"t": "10:22:23", "elapsed": 1343.7, "lat": 22.315171, "lon": 114.159181, "speed": 11.76, "cadence": 49, "distance": 3690.9}, {"t": "10:22:30", "elapsed": 1350.4, "lat": 22.315283, "lon": 114.159084, "speed": 12.01, "cadence": 49, "distance": 3706.9}, {"t": "10:22:37", "elapsed": 1357.1, "lat": 22.315396, "lon": 114.158991, "speed": 12.24, "cadence": 49, "distance": 3722.6}, {"t": "10:22:43", "elapsed": 1363.8, "lat": 22.31551, "lon": 114.158902, "speed": 12.43, "cadence": 49, "distance": 3738.3}, {"t": "10:22:50", "elapsed": 1370.5, "lat": 22.315625, "lon": 114.158817, "speed": 12.6, "cadence": 49, "distance": 3753.8}, {"t": "10:22:57", "elapsed": 1377.2, "lat": 22.315742, "lon": 114.158735, "speed": 12.74, "cadence": 49, "distance": 3769.2}, {"t": "10:23:03", "elapsed": 1383.8, "lat": 22.315859, "lon": 114.158658, "speed": 12.85, "cadence": 49, "distance": 3784.4}, {"t": "10:23:10", "elapsed": 1390.5, "lat": 22.315977, "lon": 114.158586, "speed": 12.92, "cadence": 49, "distance": 3799.4}, {"t": "10:23:17", "elapsed": 1397.2, "lat": 22.316096, "lon": 114.158517, "speed": 12.97, "cadence": 49, "distance": 3814.4}, {"t": "10:23:23", "elapsed": 1403.9, "lat": 22.316216, "lon": 114.158452, "speed": 12.99, "cadence": 49, "distance": 3829.3}, {"t": "10:23:30", "elapsed": 1410.6, "lat": 22.316337, "lon": 114.158392, "speed": 12.97, "cadence": 49, "distance": 3844.0}, {"t": "10:23:37", "elapsed": 1417.3, "lat": 22.316458, "lon": 114.158336, "speed": 12.93, "cadence": 49, "distance": 3858.7}, {"t": "10:23:43", "elapsed": 1424.0, "lat": 22.31658, "lon": 114.158284, "speed": 12.85, "cadence": 49, "distance": 3873.2}, {"t": "10:23:50", "elapsed": 1430.6, "lat": 22.316703, "lon": 114.158236, "speed": 12.74, "cadence": 49, "distance": 3887.7}, {"t": "10:23:57", "elapsed": 1437.3, "lat": 22.316826, "lon": 114.158193, "speed": 12.6, "cadence": 49, "distance": 3902.1}, {"t": "10:24:04", "elapsed": 1444.0, "lat": 22.31695, "lon": 114.158154, "speed": 12.44, "cadence": 49, "distance": 3916.4}, {"t": "10:24:10", "elapsed": 1450.7, "lat": 22.317074, "lon": 114.15812, "speed": 12.24, "cadence": 49, "distance": 3930.7}, {"t": "10:24:17", "elapsed": 1457.4, "lat": 22.317199, "lon": 114.158089, "speed": 12.01, "cadence": 49, "distance": 3944.9}, {"t": "10:24:24", "elapsed": 1464.1, "lat": 22.317324, "lon": 114.158064, "speed": 11.76, "cadence": 48, "distance": 3959.0}, {"t": "10:24:30", "elapsed": 1470.8, "lat": 22.317449, "lon": 114.158042, "speed": 11.48, "cadence": 48, "distance": 3973.1}, {"t": "10:24:37", "elapsed": 1477.4, "lat": 22.317575, "lon": 114.158025, "speed": 11.17, "cadence": 48, "distance": 3987.2}, {"t": "10:24:44", "elapsed": 1484.1, "lat": 22.317701, "lon": 114.158012, "speed": 10.84, "cadence": 48, "distance": 4001.3}, {"t": "10:24:50", "elapsed": 1490.8, "lat": 22.317827, "lon": 114.158004, "speed": 10.48, "cadence": 48, "distance": 4015.3}, {"t": "10:24:57", "elapsed": 1497.5, "lat": 22.317953, "lon": 114.158, "speed": 10.11, "cadence": 47, "distance": 4029.2}, {"t": "10:25:04", "elapsed": 1504.2, "lat": 22.318079, "lon": 114.158001, "speed": 9.7, "cadence": 47, "distance": 4043.2}, {"t": "10:25:10", "elapsed": 1510.9, "lat": 22.318205, "lon": 114.158006, "speed": 9.28, "cadence": 47, "distance": 4057.1}, {"t": "10:25:17", "elapsed": 1517.5, "lat": 22.318331, "lon": 114.158015, "speed": 8.84, "cadence": 46, "distance": 4071.1}, {"t": "10:25:24", "elapsed": 1524.2, "lat": 22.318456, "lon": 114.158029, "speed": 8.38, "cadence": 46, "distance": 4085.1}, {"t": "10:25:30", "elapsed": 1530.9, "lat": 22.318582, "lon": 114.158047, "speed": 7.91, "cadence": 46, "distance": 4099.2}, {"t": "10:25:37", "elapsed": 1537.6, "lat": 22.318707, "lon": 114.15807, "speed": 7.42, "cadence": 46, "distance": 4113.3}, {"t": "10:25:44", "elapsed": 1544.3, "lat": 22.318832, "lon": 114.158097, "speed": 6.91, "cadence": 45, "distance": 4127.5}, {"t": "10:25:50", "elapsed": 1551.0, "lat": 22.318957, "lon": 114.158128, "speed": 6.4, "cadence": 45, "distance": 4141.7}, {"t": "10:25:57", "elapsed": 1557.7, "lat": 22.319081, "lon": 114.158164, "speed": 5.87, "cadence": 44, "distance": 4155.9}, {"t": "10:26:04", "elapsed": 1564.3, "lat": 22.319205, "lon": 114.158204, "speed": 5.34, "cadence": 44, "distance": 4170.2}, {"t": "10:26:11", "elapsed": 1571.0, "lat": 22.319328, "lon": 114.158248, "speed": 4.8, "cadence": 44, "distance": 4184.6}, {"t": "10:26:17", "elapsed": 1577.7, "lat": 22.31945, "lon": 114.158297, "speed": 4.25, "cadence": 43, "distance": 4199.0}, {"t": "10:26:24", "elapsed": 1584.4, "lat": 22.319572, "lon": 114.158349, "speed": 3.71, "cadence": 43, "distance": 4213.7}, {"t": "10:26:31", "elapsed": 1591.1, "lat": 22.319694, "lon": 114.158407, "speed": 3.16, "cadence": 42, "distance": 4228.4}, {"t": "10:26:37", "elapsed": 1597.8, "lat": 22.319814, "lon": 114.158468, "speed": 2.61, "cadence": 42, "distance": 4243.1}, {"t": "10:26:44", "elapsed": 1604.5, "lat": 22.319934, "lon": 114.158534, "speed": 2.62, "cadence": 42, "distance": 4258.0}, {"t": "10:26:51", "elapsed": 1611.1, "lat": 22.320053, "lon": 114.158603, "speed": 2.91, "cadence": 41, "distance": 4273.0}, {"t": "10:26:57", "elapsed": 1617.8, "lat": 22.320171, "lon": 114.158677, "speed": 3.21, "cadence": 41, "distance": 4288.1}, {"t": "10:27:04", "elapsed": 1624.5, "lat": 22.320288, "lon": 114.158755, "speed": 3.51, "cadence": 40, "distance": 4303.4}, {"t": "10:27:11", "elapsed": 1631.2, "lat": 22.320404, "lon": 114.158837, "speed": 3.8, "cadence": 40, "distance": 4318.7}, {"t": "10:27:17", "elapsed": 1637.9, "lat": 22.320519, "lon": 114.158924, "speed": 4.1, "cadence": 39, "distance": 4334.3}, {"t": "10:27:24", "elapsed": 1644.6, "lat": 22.320632, "lon": 114.159014, "speed": 4.4, "cadence": 39, "distance": 4349.9}, {"t": "10:27:31", "elapsed": 1651.3, "lat": 22.320745, "lon": 114.159108, "speed": 4.69, "cadence": 39, "distance": 4365.7}, {"t": "10:27:37", "elapsed": 1657.9, "lat": 22.320856, "lon": 114.159206, "speed": 4.99, "cadence": 38, "distance": 4381.6}, {"t": "10:27:44", "elapsed": 1664.6, "lat": 22.320967, "lon": 114.159308, "speed": 5.28, "cadence": 38, "distance": 4397.7}, {"t": "10:27:51", "elapsed": 1671.3, "lat": 22.321075, "lon": 114.159414, "speed": 5.56, "cadence": 38, "distance": 4413.9}, {"t": "10:27:57", "elapsed": 1678.0, "lat": 22.321183, "lon": 114.159523, "speed": 5.84, "cadence": 38, "distance": 4430.3}, {"t": "10:28:04", "elapsed": 1684.7, "lat": 22.321289, "lon": 114.159636, "speed": 6.12, "cadence": 39, "distance": 4446.9}, {"t": "10:28:11", "elapsed": 1691.4, "lat": 22.321394, "lon": 114.159753, "speed": 6.39, "cadence": 39, "distance": 4463.7}, {"t": "10:28:18", "elapsed": 1698.1, "lat": 22.321497, "lon": 114.159874, "speed": 6.66, "cadence": 40, "distance": 4480.5}, {"t": "10:28:24", "elapsed": 1704.7, "lat": 22.321599, "lon": 114.159998, "speed": 6.92, "cadence": 40, "distance": 4497.5}, {"t": "10:28:31", "elapsed": 1711.4, "lat": 22.321699, "lon": 114.160126, "speed": 7.17, "cadence": 41, "distance": 4514.7}, {"t": "10:28:38", "elapsed": 1718.1, "lat": 22.321797, "lon": 114.160257, "speed": 7.41, "cadence": 41, "distance": 4532.0}, {"t": "10:28:44", "elapsed": 1724.8, "lat": 22.321894, "lon": 114.160392, "speed": 7.65, "cadence": 41, "distance": 4549.5}, {"t": "10:28:51", "elapsed": 1731.5, "lat": 22.321989, "lon": 114.16053, "speed": 7.87, "cadence": 42, "distance": 4567.1}, {"t": "10:28:58", "elapsed": 1738.2, "lat": 22.322082, "lon": 114.160671, "speed": 8.09, "cadence": 42, "distance": 4584.9}, {"t": "10:29:04", "elapsed": 1744.8, "lat": 22.322173, "lon": 114.160815, "speed": 8.29, "cadence": 43, "distance": 4602.9}, {"t": "10:29:11", "elapsed": 1751.5, "lat": 22.322263, "lon": 114.160963, "speed": 8.48, "cadence": 43, "distance": 4621.1}, {"t": "10:29:18", "elapsed": 1758.2, "lat": 22.322351, "lon": 114.161114, "speed": 8.66, "cadence": 43, "distance": 4639.3}, {"t": "10:29:24", "elapsed": 1764.9, "lat": 22.322437, "lon": 114.161268, "speed": 8.83, "cadence": 44, "distance": 4657.8}, {"t": "10:29:31", "elapsed": 1771.6, "lat": 22.32252, "lon": 114.161424, "speed": 8.99, "cadence": 44, "distance": 4676.3}, {"t": "10:29:38", "elapsed": 1778.3, "lat": 22.322602, "lon": 114.161584, "speed": 9.13, "cadence": 45, "distance": 4695.1}, {"t": "10:29:44", "elapsed": 1785.0, "lat": 22.322682, "lon": 114.161747, "speed": 9.26, "cadence": 45, "distance": 4714.0}, {"t": "10:29:51", "elapsed": 1791.6, "lat": 22.32276, "lon": 114.161912, "speed": 9.38, "cadence": 45, "distance": 4733.0}, {"t": "10:29:58", "elapsed": 1798.3, "lat": 22.322836, "lon": 114.16208, "speed": 9.48, "cadence": 46, "distance": 4752.2}, {"t": "10:30:05", "elapsed": 1805.0, "lat": 22.322909, "lon": 114.16225, "speed": 9.56, "cadence": 46, "distance": 4771.4}, {"t": "10:30:11", "elapsed": 1811.7, "lat": 22.32298, "lon": 114.162423, "speed": 9.63, "cadence": 46, "distance": 4790.9}, {"t": "10:30:18", "elapsed": 1818.4, "lat": 22.32305, "lon": 114.162599, "speed": 9.68, "cadence": 47, "distance": 4810.6}, {"t": "10:30:25", "elapsed": 1825.1, "lat": 22.323117, "lon": 114.162777, "speed": 9.72, "cadence": 47, "distance": 4830.3}, {"t": "10:30:31", "elapsed": 1831.8, "lat": 22.323181, "lon": 114.162957, "speed": 9.74, "cadence": 47, "distance": 4850.1}, {"t": "10:30:38", "elapsed": 1838.4, "lat": 22.323244, "lon": 114.16314, "speed": 9.74, "cadence": 47, "distance": 4870.1}, {"t": "10:30:45", "elapsed": 1845.1, "lat": 22.323304, "lon": 114.163324, "speed": 9.73, "cadence": 48, "distance": 4890.1}, {"t": "10:30:51", "elapsed": 1851.8, "lat": 22.323361, "lon": 114.163511, "speed": 9.7, "cadence": 48, "distance": 4910.4}, {"t": "10:30:58", "elapsed": 1858.5, "lat": 22.323417, "lon": 114.163699, "speed": 9.65, "cadence": 48, "distance": 4930.7}, {"t": "10:31:05", "elapsed": 1865.2, "lat": 22.32347, "lon": 114.16389, "speed": 9.58, "cadence": 48, "distance": 4951.1}, {"t": "10:31:11", "elapsed": 1871.9, "lat": 22.32352, "lon": 114.164082, "speed": 9.5, "cadence": 49, "distance": 4971.7}, {"t": "10:31:18", "elapsed": 1878.6, "lat": 22.323569, "lon": 114.164276, "speed": 9.4, "cadence": 49, "distance": 4992.4}, {"t": "10:31:25", "elapsed": 1885.2, "lat": 22.323614, "lon": 114.164472, "speed": 9.28, "cadence": 49, "distance": 5013.1}, {"t": "10:31:31", "elapsed": 1891.9, "lat": 22.323657, "lon": 114.164669, "speed": 9.14, "cadence": 49, "distance": 5034.0}, {"t": "10:31:38", "elapsed": 1898.6, "lat": 22.323698, "lon": 114.164868, "speed": 8.99, "cadence": 49, "distance": 5054.9}, {"t": "10:31:45", "elapsed": 1905.3, "lat": 22.323736, "lon": 114.165068, "speed": 8.82, "cadence": 49, "distance": 5075.9}, {"t": "10:31:51", "elapsed": 1912.0, "lat": 22.323772, "lon": 114.16527, "speed": 8.63, "cadence": 49, "distance": 5097.1}, {"t": "10:31:58", "elapsed": 1918.7, "lat": 22.323805, "lon": 114.165472, "speed": 8.43, "cadence": 49, "distance": 5118.2}, {"t": "10:32:05", "elapsed": 1925.3, "lat": 22.323836, "lon": 114.165676, "speed": 8.21, "cadence": 49, "distance": 5139.4}, {"t": "10:32:12", "elapsed": 1932.0, "lat": 22.323864, "lon": 114.165881, "speed": 7.98, "cadence": 49, "distance": 5160.7}, {"t": "10:32:18", "elapsed": 1938.7, "lat": 22.323889, "lon": 114.166087, "speed": 7.73, "cadence": 49, "distance": 5182.0}, {"t": "10:32:25", "elapsed": 1945.4, "lat": 22.323912, "lon": 114.166293, "speed": 7.46, "cadence": 49, "distance": 5203.3}, {"t": "10:32:32", "elapsed": 1952.1, "lat": 22.323932, "lon": 114.166501, "speed": 7.18, "cadence": 49, "distance": 5224.7}, {"t": "10:32:38", "elapsed": 1958.8, "lat": 22.32395, "lon": 114.166708, "speed": 6.89, "cadence": 49, "distance": 5246.1}, {"t": "10:32:45", "elapsed": 1965.5, "lat": 22.323965, "lon": 114.166917, "speed": 6.59, "cadence": 49, "distance": 5267.6}, {"t": "10:32:52", "elapsed": 1972.1, "lat": 22.323977, "lon": 114.167126, "speed": 6.27, "cadence": 49, "distance": 5289.1}, {"t": "10:32:58", "elapsed": 1978.8, "lat": 22.323987, "lon": 114.167335, "speed": 5.94, "cadence": 49, "distance": 5310.7}, {"t": "10:33:05", "elapsed": 1985.5, "lat": 22.323994, "lon": 114.167545, "speed": 5.6, "cadence": 49, "distance": 5332.3}, {"t": "10:33:12", "elapsed": 1992.2, "lat": 22.323998, "lon": 114.167755, "speed": 5.25, "cadence": 49, "distance": 5353.8}, {"t": "10:33:18", "elapsed": 1998.9, "lat": 22.324, "lon": 114.167965, "speed": 4.89, "cadence": 49, "distance": 5375.4}, {"t": "10:33:25", "elapsed": 2005.6, "lat": 22.323999, "lon": 114.168175, "speed": 5.22, "cadence": 49, "distance": 5397.0}, {"t": "10:33:32", "elapsed": 2012.3, "lat": 22.323996, "lon": 114.168385, "speed": 5.68, "cadence": 49, "distance": 5418.5}, {"t": "10:33:38", "elapsed": 2018.9, "lat": 22.323989, "lon": 114.168595, "speed": 6.13, "cadence": 48, "distance": 5440.1}, {"t": "10:33:45", "elapsed": 2025.6, "lat": 22.323981, "lon": 114.168804, "speed": 6.57, "cadence": 48, "distance": 5461.6}, {"t": "10:33:52", "elapsed": 2032.3, "lat": 22.323969, "lon": 114.169013, "speed": 7.0, "cadence": 48, "distance": 5483.1}, {"t": "10:33:58", "elapsed": 2039.0, "lat": 22.323955, "lon": 114.169222, "speed": 7.41, "cadence": 48, "distance": 5504.6}, {"t": "10:34:05", "elapsed": 2045.7, "lat": 22.323938, "lon": 114.16943, "speed": 7.81, "cadence": 48, "distance": 5526.1}, {"t": "10:34:12", "elapsed": 2052.4, "lat": 22.323919, "lon": 114.169638, "speed": 8.19, "cadence": 47, "distance": 5547.5}, {"t": "10:34:19", "elapsed": 2059.1, "lat": 22.323897, "lon": 114.169845, "speed": 8.55, "cadence": 47, "distance": 5568.9}, {"t": "10:34:25", "elapsed": 2065.7, "lat": 22.323872, "lon": 114.170051, "speed": 8.89, "cadence": 47, "distance": 5590.2}, {"t": "10:34:32", "elapsed": 2072.4, "lat": 22.323845, "lon": 114.170256, "speed": 9.22, "cadence": 46, "distance": 5611.4}, {"t": "10:34:39", "elapsed": 2079.1, "lat": 22.323816, "lon": 114.17046, "speed": 9.52, "cadence": 46, "distance": 5632.6}, {"t": "10:34:45", "elapsed": 2085.8, "lat": 22.323783, "lon": 114.170663, "speed": 9.8, "cadence": 46, "distance": 5653.7}, {"t": "10:34:52", "elapsed": 2092.5, "lat": 22.323749, "lon": 114.170865, "speed": 10.06, "cadence": 46, "distance": 5674.7}, {"t": "10:34:59", "elapsed": 2099.2, "lat": 22.323711, "lon": 114.171065, "speed": 10.3, "cadence": 45, "distance": 5695.7}, {"t": "10:35:05", "elapsed": 2105.8, "lat": 22.323671, "lon": 114.171264, "speed": 10.52, "cadence": 45, "distance": 5716.7}, {"t": "10:35:12", "elapsed": 2112.5, "lat": 22.323629, "lon": 114.171462, "speed": 10.71, "cadence": 44, "distance": 5737.6}, {"t": "10:35:19", "elapsed": 2119.2, "lat": 22.323584, "lon": 114.171658, "speed": 10.88, "cadence": 44, "distance": 5758.3}, {"t": "10:35:25", "elapsed": 2125.9, "lat": 22.323537, "lon": 114.171853, "speed": 11.02, "cadence": 44, "distance": 5779.0}, {"t": "10:35:32", "elapsed": 2132.6, "lat": 22.323487, "lon": 114.172046, "speed": 11.14, "cadence": 43, "distance": 5799.6}, {"t": "10:35:39", "elapsed": 2139.3, "lat": 22.323435, "lon": 114.172237, "speed": 11.23, "cadence": 43, "distance": 5820.1}, {"t": "10:35:45", "elapsed": 2146.0, "lat": 22.32338, "lon": 114.172426, "speed": 11.3, "cadence": 43, "distance": 5840.5}, {"t": "10:35:52", "elapsed": 2152.6, "lat": 22.323323, "lon": 114.172614, "speed": 11.35, "cadence": 42, "distance": 5860.8}, {"t": "10:35:59", "elapsed": 2159.3, "lat": 22.323264, "lon": 114.172799, "speed": 11.37, "cadence": 42, "distance": 5880.9}, {"t": "10:36:06", "elapsed": 2166.0, "lat": 22.323202, "lon": 114.172982, "speed": 11.37, "cadence": 41, "distance": 5900.9}, {"t": "10:36:12", "elapsed": 2172.7, "lat": 22.323138, "lon": 114.173163, "speed": 11.34, "cadence": 41, "distance": 5920.8}, {"t": "10:36:19", "elapsed": 2179.4, "lat": 22.323072, "lon": 114.173342, "speed": 11.29, "cadence": 40, "distance": 5940.6}, {"t": "10:36:26", "elapsed": 2186.1, "lat": 22.323004, "lon": 114.173518, "speed": 11.21, "cadence": 40, "distance": 5960.2}, {"t": "10:36:32", "elapsed": 2192.8, "lat": 22.322933, "lon": 114.173692, "speed": 11.11, "cadence": 39, "distance": 5979.8}, {"t": "10:36:39", "elapsed": 2199.4, "lat": 22.32286, "lon": 114.173864, "speed": 10.99, "cadence": 39, "distance": 5999.2}, {"t": "10:36:46", "elapsed": 2206.1, "lat": 22.322785, "lon": 114.174033, "speed": 10.85, "cadence": 39, "distance": 6018.4}, {"t": "10:36:52", "elapsed": 2212.8, "lat": 22.322708, "lon": 114.174199, "speed": 10.69, "cadence": 38, "distance": 6037.4}, {"t": "10:36:59", "elapsed": 2219.5, "lat": 22.322629, "lon": 114.174362, "speed": 10.5, "cadence": 38, "distance": 6056.3}, {"t": "10:37:06", "elapsed": 2226.2, "lat": 22.322548, "lon": 114.174523, "speed": 10.3, "cadence": 38, "distance": 6075.1}, {"t": "10:37:12", "elapsed": 2232.9, "lat": 22.322465, "lon": 114.17468, "speed": 10.07, "cadence": 38, "distance": 6093.7}, {"t": "10:37:19", "elapsed": 2239.6, "lat": 22.32238, "lon": 114.174835, "speed": 9.83, "cadence": 39, "distance": 6112.3}, {"t": "10:37:26", "elapsed": 2246.2, "lat": 22.322292, "lon": 114.174987, "speed": 9.57, "cadence": 39, "distance": 6130.6}, {"t": "10:37:32", "elapsed": 2252.9, "lat": 22.322203, "lon": 114.175136, "speed": 9.29, "cadence": 40, "distance": 6148.8}, {"t": "10:37:39", "elapsed": 2259.6, "lat": 22.322113, "lon": 114.175281, "speed": 9.0, "cadence": 40, "distance": 6166.8}, {"t": "10:37:46", "elapsed": 2266.3, "lat": 22.32202, "lon": 114.175424, "speed": 8.7, "cadence": 40, "distance": 6184.7}, {"t": "10:37:52", "elapsed": 2273.0, "lat": 22.321926, "lon": 114.175563, "speed": 8.37, "cadence": 41, "distance": 6202.4}, {"t": "10:37:59", "elapsed": 2279.7, "lat": 22.321829, "lon": 114.175698, "speed": 8.04, "cadence": 41, "distance": 6219.9}, {"t": "10:38:06", "elapsed": 2286.4, "lat": 22.321732, "lon": 114.175831, "speed": 7.7, "cadence": 42, "distance": 6237.4}, {"t": "10:38:13", "elapsed": 2293.0, "lat": 22.321632, "lon": 114.17596, "speed": 7.34, "cadence": 42, "distance": 6254.6}, {"t": "10:38:19", "elapsed": 2299.7, "lat": 22.321531, "lon": 114.176085, "speed": 6.98, "cadence": 43, "distance": 6271.6}, {"t": "10:38:26", "elapsed": 2306.4, "lat": 22.321428, "lon": 114.176207, "speed": 6.61, "cadence": 43, "distance": 6288.6}, {"t": "10:38:33", "elapsed": 2313.1, "lat": 22.321324, "lon": 114.176325, "speed": 6.23, "cadence": 43, "distance": 6305.3}, {"t": "10:38:39", "elapsed": 2319.8, "lat": 22.321219, "lon": 114.17644, "speed": 5.84, "cadence": 44, "distance": 6321.9}, {"t": "10:38:46", "elapsed": 2326.5, "lat": 22.321111, "lon": 114.17655, "speed": 5.46, "cadence": 44, "distance": 6338.4}, {"t": "10:38:53", "elapsed": 2333.1, "lat": 22.321003, "lon": 114.176657, "speed": 5.06, "cadence": 45, "distance": 6354.6}, {"t": "10:38:59", "elapsed": 2339.8, "lat": 22.320893, "lon": 114.176761, "speed": 4.67, "cadence": 45, "distance": 6370.8}, {"t": "10:39:06", "elapsed": 2346.5, "lat": 22.320782, "lon": 114.17686, "speed": 4.27, "cadence": 45, "distance": 6386.7}, {"t": "10:39:13", "elapsed": 2353.2, "lat": 22.32067, "lon": 114.176955, "speed": 3.88, "cadence": 46, "distance": 6402.6}, {"t": "10:39:19", "elapsed": 2359.9, "lat": 22.320557, "lon": 114.177047, "speed": 3.48, "cadence": 46, "distance": 6418.3}, {"t": "10:39:26", "elapsed": 2366.6, "lat": 22.320442, "lon": 114.177134, "speed": 3.09, "cadence": 46, "distance": 6433.9}, {"t": "10:39:33", "elapsed": 2373.3, "lat": 22.320326, "lon": 114.177218, "speed": 2.7, "cadence": 47, "distance": 6449.3}, {"t": "10:39:39", "elapsed": 2379.9, "lat": 22.32021, "lon": 114.177297, "speed": 2.31, "cadence": 47, "distance": 6464.6}, {"t": "10:39:46", "elapsed": 2386.6, "lat": 22.320092, "lon": 114.177372, "speed": 1.93, "cadence": 0, "distance": 6479.8}, {"t": "10:39:53", "elapsed": 2393.3, "lat": 22.319974, "lon": 114.177444, "speed": 1.56, "cadence": 0, "distance": 6494.9}, {"t": "10:40:00", "elapsed": 2400.0, "lat": 22.319854, "lon": 114.177511, "speed": 1.19, "cadence": 0, "distance": 6509.8}];
+const map = L.map("map", { zoomControl: true });
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+  attribution: "Esri, Maxar, Earthstar Geographics",
+  maxZoom: 19
+}).addTo(map);
+
+const trail = L.polyline([], { color: "#00d4aa", weight: 4, opacity: 0.85, smoothFactor: 0 }).addTo(map);
+L.polyline(POINTS.map(p => [p.lat, p.lon]), { color: "#475569", weight: 3, opacity: 0.35, smoothFactor: 0 }).addTo(map);
+
+const dotIcon = L.divIcon({
+  className: "",
+  html: '<div class="boat-marker"><div class="speed-badge" id="map-speed">0.0 km/h</div><div class="dot-marker"></div></div>',
+  iconSize: [90, 48],
+  iconAnchor: [45, 30],
+});
+const dot = L.marker([POINTS[0].lat, POINTS[0].lon], { icon: dotIcon, zIndexOffset: 1000 }).addTo(map);
+const mapSpeedEl = () => dot.getElement()?.querySelector("#map-speed");
+
+map.fitBounds(L.latLngBounds(POINTS.map(p => [p.lat, p.lon])), { padding: [40, 40] });
+
+const chartCanvas = document.getElementById("speed-chart");
+const chartCursor = document.getElementById("chart-cursor");
+const chartCursorDot = chartCursor.querySelector(".chart-cursor-dot");
+const chartCtx = chartCanvas.getContext("2d");
+const CHART = { padL: 44, padR: 16, padT: 12, padB: 28, maxSpeed: Math.ceil(Math.max(...POINTS.map(p => p.speed)) + 1) };
+let chartGeomCache = null;
+
+function chartGeom() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = chartCanvas.getBoundingClientRect();
+  if (!chartGeomCache || chartGeomCache.w !== rect.width || chartGeomCache.h !== rect.height) {
+    chartCanvas.width = rect.width * dpr;
+    chartCanvas.height = rect.height * dpr;
+    chartCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    chartGeomCache = {
+      w: rect.width,
+      h: rect.height,
+      plotW: rect.width - CHART.padL - CHART.padR,
+      plotH: rect.height - CHART.padT - CHART.padB,
+    };
+    drawChartBase();
+  }
+  return chartGeomCache;
+}
+
+function progressToX(progress, plotW) {
+  return CHART.padL + progress * plotW;
+}
+
+function speedToY(speed, plotH) {
+  return CHART.padT + plotH - (speed / CHART.maxSpeed) * plotH;
+}
+
+function xToProgress(x, plotW) {
+  return Math.max(0, Math.min(1, (x - CHART.padL) / plotW));
+}
+
+function drawChartBase() {
+  const { w, h, plotW, plotH } = chartGeomCache;
+  chartCtx.clearRect(0, 0, w, h);
+  chartCtx.fillStyle = "#1a1a2e";
+  chartCtx.fillRect(CHART.padL, CHART.padT, plotW, plotH);
+
+  chartCtx.strokeStyle = "#0f3460";
+  chartCtx.lineWidth = 1;
+  for (let tick = 0; tick <= CHART.maxSpeed; tick += 4) {
+    const y = speedToY(tick, plotH);
+    chartCtx.beginPath();
+    chartCtx.moveTo(CHART.padL, y);
+    chartCtx.lineTo(CHART.padL + plotW, y);
+    chartCtx.stroke();
+    chartCtx.fillStyle = "#64748b";
+    chartCtx.font = "10px sans-serif";
+    chartCtx.textAlign = "right";
+    chartCtx.fillText(tick, CHART.padL - 6, y + 3);
+  }
+
+  const tickCount = 6;
+  chartCtx.textAlign = "center";
+  chartCtx.fillStyle = "#94a3b8";
+  for (let t = 0; t <= tickCount; t++) {
+    const idx = Math.round((t / tickCount) * (POINTS.length - 1));
+    chartCtx.fillText(POINTS[idx].t.slice(0, 5), progressToX(idx / (POINTS.length - 1), plotW), h - 8);
+  }
+
+  chartCtx.fillStyle = "rgba(46, 204, 113, 0.12)";
+  chartCtx.beginPath();
+  chartCtx.moveTo(progressToX(0, plotW), speedToY(0, plotH));
+  for (let i = 0; i < POINTS.length; i++) {
+    chartCtx.lineTo(progressToX(i / (POINTS.length - 1), plotW), speedToY(POINTS[i].speed, plotH));
+  }
+  chartCtx.lineTo(progressToX(1, plotW), speedToY(0, plotH));
+  chartCtx.closePath();
+  chartCtx.fill();
+
+  chartCtx.strokeStyle = "#2ecc71";
+  chartCtx.lineWidth = 1.5;
+  chartCtx.beginPath();
+  for (let i = 0; i < POINTS.length; i++) {
+    const x = progressToX(i / (POINTS.length - 1), plotW);
+    const y = speedToY(POINTS[i].speed, plotH);
+    if (i === 0) chartCtx.moveTo(x, y);
+    else chartCtx.lineTo(x, y);
+  }
+  chartCtx.stroke();
+
+  chartCtx.fillStyle = "#eee";
+  chartCtx.font = "11px sans-serif";
+  chartCtx.textAlign = "left";
+  chartCtx.fillText("km/h", 6, CHART.padT + 10);
+  chartCtx.fillStyle = "#94a3b8";
+  chartCtx.fillText("HKT", CHART.padL + plotW / 2 - 10, h - 22);
+}
+
+function moveChartCursor(progress, speed) {
+  const { plotW, plotH } = chartGeom();
+  const x = progressToX(progress, plotW);
+  chartCursor.style.transform = `translateX(${x}px)`;
+  chartCursorDot.style.top = `${speedToY(speed, plotH)}px`;
+}
+
+function stateAtElapsed(elapsed) {
+  let lo = 0, hi = POINTS.length - 1;
+  while (lo < hi - 1) {
+    const mid = (lo + hi) >> 1;
+    if (POINTS[mid].elapsed <= elapsed) lo = mid;
+    else hi = mid;
+  }
+  const a = POINTS[lo];
+  const b = POINTS[Math.min(lo + 1, POINTS.length - 1)];
+  const span = Math.max(b.elapsed - a.elapsed, 0.001);
+  const frac = Math.max(0, Math.min(1, (elapsed - a.elapsed) / span));
+  const progress = (lo + frac) / (POINTS.length - 1);
+  return {
+    idx: lo,
+    frac,
+    progress,
+    elapsed,
+    lat: a.lat + (b.lat - a.lat) * frac,
+    lon: a.lon + (b.lon - a.lon) * frac,
+    speed: a.speed + (b.speed - a.speed) * frac,
+    distance: a.distance + (b.distance - a.distance) * frac,
+    cadence: frac < 0.5 ? a.cadence : b.cadence,
+    time: frac < 0.5 ? a.t : b.t,
+  };
+}
+
+let trailCacheIdx = -1;
+let trailCacheLatLngs = [];
+
+function resetTrailCache(idx) {
+  trailCacheIdx = idx;
+  trailCacheLatLngs = [];
+  for (let i = 0; i <= idx; i++) trailCacheLatLngs.push([POINTS[i].lat, POINTS[i].lon]);
+}
+
+function updateTrail(state) {
+  if (state.idx < trailCacheIdx) resetTrailCache(state.idx);
+  if (state.idx > trailCacheIdx) {
+    for (let i = trailCacheIdx + 1; i <= state.idx; i++) {
+      trailCacheLatLngs.push([POINTS[i].lat, POINTS[i].lon]);
+    }
+    trailCacheIdx = state.idx;
+  }
+  trail.setLatLngs(trailCacheLatLngs.concat([[state.lat, state.lon]]));
+}
+
+const slider = document.getElementById("slider");
+const playBtn = document.getElementById("play-btn");
+const speedBtns = document.getElementById("speed-btns");
+let playing = false;
+let playbackRate = 1;
+let playStartWall = 0;
+let playStartElapsed = 0;
+let playStartProgress = 0;
+let rafId = null;
+let lastStatsIdx = -1;
+
+function applyState(state, syncSlider) {
+  updateTrail(state);
+  dot.setLatLng([state.lat, state.lon]);
+  const badge = mapSpeedEl();
+  if (badge) badge.textContent = `${state.speed.toFixed(1)} km/h`;
+  moveChartCursor(state.progress, state.speed);
+
+  if (syncSlider) slider.value = state.idx;
+
+  if (state.idx !== lastStatsIdx) {
+    lastStatsIdx = state.idx;
+    document.getElementById("v-time").textContent = state.time;
+    document.getElementById("v-cadence").textContent = state.cadence > 0 ? state.cadence : "—";
+  }
+  document.getElementById("v-speed").textContent = state.speed.toFixed(1);
+  document.getElementById("v-dist").textContent = (state.distance / 1000).toFixed(2);
+}
+
+function update(i) {
+  const p = POINTS[i];
+  lastStatsIdx = -1;
+  resetTrailCache(i);
+  applyState({
+    idx: i,
+    frac: 0,
+    progress: i / (POINTS.length - 1),
+    lat: p.lat,
+    lon: p.lon,
+    speed: p.speed,
+    distance: p.distance,
+    cadence: p.cadence,
+    time: p.t,
+  }, true);
+}
+
+function setPlaying(on) {
+  playing = on;
+  playBtn.textContent = on ? "⏸" : "▶";
+  playBtn.title = on ? "Pause" : "Play";
+}
+
+function pause() {
+  if (playing) {
+    const wallSec = (performance.now() - playStartWall) / 1000 * playbackRate;
+    const progress = Math.min(1, playStartProgress + (wallSec / BASE_PLAY_SECONDS));
+    slider.value = Math.round(progress * (POINTS.length - 1));
+  }
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = null;
+  setPlaying(false);
+}
+
+const SESSION_DURATION = POINTS[POINTS.length - 1].elapsed;
+const BASE_PLAY_SECONDS = 120; // 1× plays the full session in 2 minutes
+
+function syncPlayAnchor() {
+  const progress = +slider.value / (POINTS.length - 1);
+  playStartProgress = progress;
+  playStartElapsed = progress * SESSION_DURATION;
+  playStartWall = performance.now();
+}
+
+function setPlaybackRate(rate) {
+  playbackRate = rate;
+  speedBtns.querySelectorAll("button").forEach(btn => {
+    btn.classList.toggle("active", +btn.dataset.rate === rate);
+  });
+  if (playing) syncPlayAnchor();
+}
+
+function tick() {
+  if (!playing) return;
+  const wallSec = (performance.now() - playStartWall) / 1000 * playbackRate;
+  const progress = Math.min(1, playStartProgress + (wallSec / BASE_PLAY_SECONDS));
+  if (progress >= 1) {
+    pause();
+    update(POINTS.length - 1);
+    return;
+  }
+  applyState(stateAtElapsed(progress * SESSION_DURATION), false);
+  rafId = requestAnimationFrame(tick);
+}
+
+function play() {
+  if (+slider.value >= POINTS.length - 1) {
+    slider.value = 0;
+    update(0);
+    playStartProgress = 0;
+    playStartElapsed = 0;
+  } else {
+    playStartProgress = +slider.value / (POINTS.length - 1);
+    playStartElapsed = playStartProgress * SESSION_DURATION;
+  }
+  playStartWall = performance.now();
+  lastStatsIdx = -1;
+  setPlaying(true);
+  rafId = requestAnimationFrame(tick);
+}
+
+playBtn.addEventListener("click", () => playing ? pause() : play());
+slider.addEventListener("input", e => {
+  pause();
+  update(+e.target.value);
+});
+speedBtns.addEventListener("click", e => {
+  const btn = e.target.closest("button[data-rate]");
+  if (btn) setPlaybackRate(+btn.dataset.rate);
+});
+chartCanvas.addEventListener("click", e => {
+  const rect = chartCanvas.getBoundingClientRect();
+  const { plotW } = chartGeom();
+  const progress = xToProgress(e.clientX - rect.left, plotW);
+  const idx = Math.round(progress * (POINTS.length - 1));
+  pause();
+  slider.value = idx;
+  update(idx);
+});
+window.addEventListener("resize", () => {
+  chartGeomCache = null;
+  chartGeom();
+  moveChartCursor(+slider.value / (POINTS.length - 1), POINTS[+slider.value].speed);
+});
+chartGeom();
+update(0);
+</script>
+</body>
+</html>

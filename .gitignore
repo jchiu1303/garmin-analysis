@@ -1,0 +1,19 @@
+# Raw activity data — keep local, never commit
+*.fit
+analysis_*.csv
+analysis_*.tsv
+
+# Real session replays (use demo/replay.html for the public repo)
+Dragonboat/**/replay.html
+
+# Generated static exports (may contain GPS/HR)
+*.png
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
