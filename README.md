@@ -2,6 +2,17 @@
 
 Interactive replay and analysis for Garmin FIT activity files (SUP / paddling profile).
 
+**Repo:** https://github.com/jchiu1303/garmin-analysis (public)
+
+## Privacy model
+
+| Location | What's there |
+|----------|----------------|
+| **GitHub (public)** | `demo/replay.html` with **synthetic** GPS/speed data only |
+| **Local machine** | Real `.fit` files, real `replay.html`, CSV/PNG exports |
+
+Real session replays under `Dragonboat/**/replay.html` are **gitignored**. Git history was rewritten so no real route data is recoverable from the repo. Share real replays privately (email, Drive) if needed.
+
 ## Quick start
 
 ```bash
@@ -85,3 +96,27 @@ Loaded from CDN inside `replay.html` (no install for viewers):
 
 - [Leaflet](https://leafletjs.com/) 1.9.4 — map
 - Esri World Imagery — satellite tiles
+
+## Git workflow
+
+```bash
+# After local changes to code or demo
+git add generate_replay.py demo/replay.html README.md .gitignore requirements.txt
+git commit -m "Describe your change"
+git push origin main
+
+# Regenerate public demo after generator changes
+python3 generate_replay.py --demo
+git add demo/replay.html && git commit -m "Update demo replay" && git push
+```
+
+Never `git add Dragonboat/` — real activity data stays local.
+
+## Example: 22 Jun 2026 session (local)
+
+```bash
+python3 generate_replay.py Dragonboat/20260622/23339425024_ACTIVITY.fit --date "22 Jun 2026"
+# Writes Dragonboat/20260622/replay.html (gitignored)
+```
+
+Optional local analysis exports (also gitignored): `analysis_records.csv`, `analysis_laps.csv`, PNG charts.
