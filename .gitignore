@@ -5,6 +5,7 @@ analysis_*.tsv
 
 # Real session replays (use demo/replay.html for the public repo)
 Dragonboat/**/replay.html
+Dragonboat/**/*_replay.html
 
 # Generated static exports (may contain GPS/HR)
 *.png

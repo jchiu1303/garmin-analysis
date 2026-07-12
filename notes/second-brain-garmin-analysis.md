@@ -2,7 +2,7 @@
 
 **Tags:** #garmin #dragonboat #fit #gps #side-project #data-viz  
 **Status:** Active  
-**Last updated:** 2026-06-24  
+**Last updated:** 2026-06-25  
 **Repo:** https://github.com/jchiu1303/garmin-analysis (public)
 
 ---
@@ -42,10 +42,13 @@ Turn Garmin FIT files (recorded as SUP/paddling) into a **self-contained interac
 ├── demo/replay.html       # PUBLIC — synthetic route (committed)
 ├── Dragonboat/20260622/
 │   ├── 23339425024_ACTIVITY.fit   # LOCAL — raw Garmin export
-│   ├── replay.html                # LOCAL — real interactive replay (gitignored)
+│   ├── 20260622_replay.html       # LOCAL — real interactive replay (gitignored)
 │   ├── analysis_records.csv       # LOCAL — 1,294 rows, gitignored
 │   ├── analysis_laps.csv          # LOCAL — 11 laps, gitignored
 │   └── *.png                      # LOCAL — static charts, gitignored
+├── Dragonboat/20260624/
+│   ├── 23363712085_ACTIVITY.fit
+│   └── 20260624_replay.html       # 375 GPS points
 ```
 
 ---
@@ -57,10 +60,9 @@ cd ~/Projects/GrokBuild/garmin-analysis
 pip install -r requirements.txt
 
 # Real session (local, gitignored output)
-python3 generate_replay.py Dragonboat/20260622/23339425024_ACTIVITY.fit \
-  --date "22 Jun 2026" \
-  -o Dragonboat/20260622/replay.html
-open Dragonboat/20260622/replay.html
+# Default output: Dragonboat/<folder>/<folder>_replay.html
+python3 generate_replay.py Dragonboat/20260624/23363712085_ACTIVITY.fit --date "24 Jun 2026"
+open Dragonboat/20260624/20260624_replay.html
 
 # Public demo (for GitHub)
 python3 generate_replay.py --demo
@@ -143,8 +145,37 @@ Time (HKT), speed, stroke rate (spm), distance — all synced
 
 ---
 
+## Garmin export & scheduling
+
+**Garmin Connect has no built-in scheduled export** to a local folder. Activities sync to the cloud automatically; getting `.fit` files locally is a separate step.
+
+| Method | Scheduled? | Notes |
+|--------|------------|-------|
+| Per-activity export (Connect web → activity → ⋮ → Export Original) | No | Best source — original `.fit` with full fields |
+| Account data export (Connect → Settings → Export Your Data) | No | One-time ZIP request; Garmin emails when ready (hours). Not recurring |
+| Watch/phone sync | Auto-upload only | Syncs to Garmin cloud; does **not** drop `.fit` files on Mac |
+
+### Current workflow (manual)
+
+1. Export `.fit` from Garmin Connect after a session
+2. Save to `Dragonboat/YYYYMMDD/`
+3. Run `generate_replay.py` → `YYYYMMDD_replay.html`
+
+### Automation options (not built)
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **Python + `garminconnect` / `garth`** + cron/launchd | Fits this repo; can chain replay generation | Unofficial API; credentials stored locally |
+| **Copy from watch** (`GARMIN/ACTIVITY/` when plugged in) | True original FIT | Only when device connected |
+| **Strava API** (if Garmin → Strava sync on) | Easy scheduled pull | Often less complete than original FIT |
+
+**Likely next step:** `fetch_garmin.py` — download new activities since last run, save to `Dragonboat/YYYYMMDD/`, optionally run `generate_replay.py`. Schedule daily via cron or launchd. Credentials in local config only (gitignored).
+
+---
+
 ## Future ideas (not built)
 
+- `fetch_garmin.py` — automated FIT download + replay generation (see above)
 - HR overlay on chart
 - Pace (min/500m) on chart
 - Click route on map to jump
@@ -156,6 +187,6 @@ Time (HKT), speed, stroke rate (spm), distance — all synced
 
 ## Related
 
-- Garmin export: activity FIT from watch (SUP profile)
+- Garmin export: manual FIT from Connect (SUP profile); no native scheduler — see **Garmin export & scheduling**
 - Strava: similar route visibility — acceptable for intentional sharing
 - Python dep: `fitparse` only

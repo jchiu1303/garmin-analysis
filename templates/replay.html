@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{TITLE}}</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>{{CSS}}</style>
+</head>
+<body>
+<header>
+  <h1>{{TITLE}}</h1>
+  <span>{{DATE}} · {{START}}–{{END}} HKT · {{TOTAL_KM}} km</span>
+</header>
+<div class="map-wrap">
+  <div id="map"></div>
+</div>
+<div class="chart-wrap">
+  <div class="chart-header">
+    <h2>Speed over time</h2>
+    <span>Space play/pause · ←→ step · 1–5 speed · click chart to jump</span>
+  </div>
+  <div class="chart-stage">
+    <canvas id="speed-chart"></canvas>
+    <div id="chart-cursor">
+      <div class="chart-cursor-line"></div>
+      <div class="chart-cursor-dot"></div>
+    </div>
+  </div>
+</div>
+<div class="panel">
+  <div class="stats">
+    <div class="stat"><div class="label">Time</div><div class="value" id="v-time">--:--:--</div></div>
+    <div class="stat"><div class="label">Speed</div><div class="value" id="v-speed">0.0</div><div class="unit">km/h</div></div>
+    <div class="stat"><div class="label">Stroke Rate</div><div class="value" id="v-cadence">—</div><div class="unit">spm</div></div>
+    <div class="stat"><div class="label">Distance</div><div class="value" id="v-dist">0.00</div><div class="unit">km</div></div>
+  </div>
+  <div class="controls">
+    <button id="play-btn" title="Play / Pause">▶</button>
+    <label>{{START}}</label>
+    <input type="range" id="slider" min="0" max="{{SLIDER_MAX}}" value="0" step="1">
+    <label>{{END}}</label>
+  </div>
+  <div class="speed-row">
+    <span class="label">Speed</span>
+    <div class="speed-btns" id="speed-btns">
+      <button data-rate="0.25">0.25×</button>
+      <button data-rate="0.5">0.5×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="2">2×</button>
+      <button data-rate="4">4×</button>
+    </div>
+  </div>
+</div>
+<script>{{JS}}</script>
+</body>
+</html>

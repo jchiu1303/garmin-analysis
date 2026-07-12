@@ -80,7 +80,10 @@ python3 generate_replay.py --demo [options]
 
 ```
 garmin-analysis/
-├── generate_replay.py          # FIT → interactive HTML generator
+├── generate_replay.py          # CLI entry point
+├── fit_data.py                 # Load FIT / demo points
+├── html_builder.py             # Assemble self-contained HTML
+├── templates/                  # replay.html, .css, .js (edit UI here)
 ├── demo/replay.html            # Public demo (synthetic data)
 ├── requirements.txt
 ├── README.md
