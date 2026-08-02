@@ -9,11 +9,14 @@
   <meta property="og:description" content="Turn Garmin FIT / zip exports into a shareable map + speed replay. Private — all processing in your browser." />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="app.css" />
   <link rel="stylesheet" href="replay.css" />
 </head>
 <body>
+  <!-- Global toast (visible on landing + player) -->
+  <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+
   <!-- Landing -->
   <section id="landing" class="landing">
     <div class="landing-inner">
@@ -28,12 +31,18 @@
         Fully private: files stay in your browser. Nothing is uploaded to a server.
       </p>
 
-      <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Upload Garmin FIT or zip">
+      <!-- label-for association: works on iOS/Safari (no programmatic .click()) -->
+      <label id="dropzone" class="dropzone" for="file-input">
         <div class="dropzone-icon">📁</div>
         <p><strong>Drop file here</strong> or click to browse</p>
         <p class="hint">.fit · .zip (Garmin Connect export)</p>
-        <input id="file-input" type="file" accept=".fit,.zip,application/zip,application/octet-stream" hidden />
-      </div>
+      </label>
+      <input
+        id="file-input"
+        class="sr-only"
+        type="file"
+        accept=".fit,.zip,application/zip,application/octet-stream,*/*"
+      />
 
       <p id="status" class="status" hidden></p>
 
@@ -89,7 +98,7 @@
         <div class="stat"><div class="label">Distance</div><div class="value" id="v-dist">0.00</div><div class="unit">km</div></div>
       </div>
       <div class="controls">
-        <button id="play-btn" title="Play / Pause">▶</button>
+        <button id="play-btn" type="button" title="Play / Pause">▶</button>
         <label id="lbl-start">--:--</label>
         <input type="range" id="slider" min="0" max="0" value="0" step="1" />
         <label id="lbl-end">--:--</label>
@@ -122,7 +131,7 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>

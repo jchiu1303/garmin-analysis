@@ -13,6 +13,7 @@ const player = document.getElementById("player");
 const dropzone = document.getElementById("dropzone");
 const fileInput = document.getElementById("file-input");
 const statusEl = document.getElementById("status");
+const toastEl = document.getElementById("toast");
 const demoBtn = document.getElementById("demo-btn");
 const backBtn = document.getElementById("back-btn");
 const dlHtmlBtn = document.getElementById("dl-html-btn");
@@ -32,7 +33,15 @@ let state = {
   dateLabel: "",
   title: "Dragon Boat Replay",
   replay: null,
+  downloadSlug: "replay",
+  busy: false,
 };
+
+function errText(err) {
+  if (err == null) return "Unknown error";
+  if (typeof err === "string") return err;
+  return err.message || String(err);
+}
 
 function setStatus(msg, kind = "") {
   if (!msg) {
@@ -46,6 +55,25 @@ function setStatus(msg, kind = "") {
   statusEl.className = `status ${kind}`.trim();
 }
 
+let toastTimer = null;
+function showToast(msg, kind = "error") {
+  toastEl.hidden = false;
+  toastEl.textContent = msg;
+  toastEl.className = `toast toast-${kind}`;
+  clearTimeout(toastTimer);
+  if (kind !== "busy") {
+    toastTimer = setTimeout(() => {
+      toastEl.hidden = true;
+    }, 8000);
+  }
+}
+
+function clearToast() {
+  clearTimeout(toastTimer);
+  toastEl.hidden = true;
+  toastEl.textContent = "";
+}
+
 function showPlayer() {
   landing.hidden = true;
   player.hidden = false;
@@ -54,14 +82,14 @@ function showPlayer() {
 
 function showLanding() {
   if (state.replay) {
-    state.replay.destroy();
+    try {
+      state.replay.destroy();
+    } catch {
+      /* ignore */
+    }
     state.replay = null;
   }
-  // Reset map container for Leaflet re-init
-  const mapEl = document.getElementById("map");
-  mapEl.innerHTML = "";
-  if (mapEl._leaflet_id) delete mapEl._leaflet_id;
-
+  resetMapContainer();
   player.hidden = true;
   landing.hidden = false;
   document.body.style.overflow = "";
@@ -69,14 +97,49 @@ function showLanding() {
   setStatus("");
 }
 
+function resetMapContainer() {
+  const mapEl = document.getElementById("map");
+  if (!mapEl) return;
+  if (mapEl._leaflet_id) {
+    try {
+      mapEl._leaflet_id = null;
+    } catch {
+      /* ignore */
+    }
+    delete mapEl._leaflet_id;
+  }
+  mapEl.innerHTML = "";
+}
+
+function waitFrames(n = 2) {
+  return new Promise((resolve) => {
+    const step = (left) => {
+      if (left <= 0) resolve();
+      else requestAnimationFrame(() => step(left - 1));
+    };
+    step(n);
+  });
+}
+
 async function openSession({ points, dateLabel, title }) {
+  if (typeof L === "undefined") {
+    throw new Error(
+      "Map library (Leaflet) failed to load. Check your network and reload."
+    );
+  }
+  if (!points?.length) {
+    throw new Error("No track points to display.");
+  }
+
   if (state.replay) {
-    state.replay.destroy();
+    try {
+      state.replay.destroy();
+    } catch {
+      /* ignore */
+    }
     state.replay = null;
   }
-  const mapEl = document.getElementById("map");
-  mapEl.innerHTML = "";
-  if (mapEl._leaflet_id) delete mapEl._leaflet_id;
+  resetMapContainer();
 
   state.points = points;
   state.dateLabel = dateLabel;
@@ -89,68 +152,98 @@ async function openSession({ points, dateLabel, title }) {
   document.getElementById("lbl-start").textContent = meta.start;
   document.getElementById("lbl-end").textContent = meta.end;
 
+  // Show player first so Leaflet gets a real size
   showPlayer();
-  // Wait a frame so layout is visible for Leaflet
-  await new Promise((r) => requestAnimationFrame(r));
-  state.replay = createReplay(points);
+  await waitFrames(2);
+  await new Promise((r) => setTimeout(r, 50));
+
+  try {
+    state.replay = createReplay(points);
+  } catch (e) {
+    // Return to landing with a visible error (status lives on landing)
+    showLanding();
+    throw e;
+  }
 }
 
 async function handleFile(file) {
-  if (!file) return;
+  if (!file || state.busy) return;
+  state.busy = true;
+  clearToast();
   setStatus(`Reading ${file.name}…`, "busy");
+  showToast(`Reading ${file.name}…`, "busy");
   try {
     const { points, dateLabel } = await loadFromFile(file);
     setStatus("");
-    const base = file.name.replace(/\.(fit|zip)$/i, "");
+    clearToast();
+    state.downloadSlug = file.name.replace(/\.(fit|zip)$/i, "") || "replay";
     await openSession({
       points,
       dateLabel,
       title: "Dragon Boat Replay",
     });
-    // stash basename for downloads
-    state.downloadSlug = base || "replay";
   } catch (err) {
-    console.error(err);
-    setStatus(err.message || String(err), "error");
+    console.error("[upload]", err);
+    const msg = errText(err);
+    // Always land on home with message — don't leave a blank player
+    if (!landing.hidden) {
+      setStatus(msg, "error");
+    } else {
+      showLanding();
+      setStatus(msg, "error");
+    }
+    showToast(msg, "error");
+  } finally {
+    state.busy = false;
+    fileInput.value = "";
   }
 }
 
-// Dropzone
-dropzone.addEventListener("click", () => fileInput.click());
-dropzone.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" || e.key === " ") {
-    e.preventDefault();
-    fileInput.click();
-  }
-});
+// File input (label association opens picker — no programmatic click needed)
 fileInput.addEventListener("change", () => {
   const f = fileInput.files?.[0];
-  handleFile(f);
-  fileInput.value = "";
+  if (f) handleFile(f);
 });
 
+// Drag-and-drop onto dropzone
 ["dragenter", "dragover"].forEach((ev) => {
   dropzone.addEventListener(ev, (e) => {
     e.preventDefault();
+    e.stopPropagation();
     dropzone.classList.add("dragover");
   });
 });
 ["dragleave", "drop"].forEach((ev) => {
   dropzone.addEventListener(ev, (e) => {
     e.preventDefault();
+    e.stopPropagation();
     dropzone.classList.remove("dragover");
   });
 });
 dropzone.addEventListener("drop", (e) => {
   const f = e.dataTransfer?.files?.[0];
-  handleFile(f);
+  if (f) handleFile(f);
+});
+
+// Also allow drop on whole landing
+landing.addEventListener("dragover", (e) => {
+  e.preventDefault();
+});
+landing.addEventListener("drop", (e) => {
+  e.preventDefault();
+  const f = e.dataTransfer?.files?.[0];
+  if (f) handleFile(f);
 });
 
 demoBtn.addEventListener("click", async () => {
+  if (state.busy) return;
+  state.busy = true;
   setStatus("Loading demo…", "busy");
+  showToast("Loading demo…", "busy");
   try {
     const { points, dateLabel } = demoPoints();
     setStatus("");
+    clearToast();
     state.downloadSlug = "demo";
     await openSession({
       points,
@@ -158,11 +251,20 @@ demoBtn.addEventListener("click", async () => {
       title: "Dragon Boat Replay (Demo)",
     });
   } catch (err) {
-    setStatus(err.message || String(err), "error");
+    console.error("[demo]", err);
+    const msg = errText(err);
+    showLanding();
+    setStatus(msg, "error");
+    showToast(msg, "error");
+  } finally {
+    state.busy = false;
   }
 });
 
-backBtn.addEventListener("click", showLanding);
+backBtn.addEventListener("click", () => {
+  showLanding();
+  clearToast();
+});
 
 dlHtmlBtn.addEventListener("click", async () => {
   if (!state.points) return;
@@ -173,10 +275,9 @@ dlHtmlBtn.addEventListener("click", async () => {
       state.title,
       state.dateLabel
     );
-    const slug = state.downloadSlug || "replay";
-    downloadText(`${slug}_replay.html`, html);
+    downloadText(`${state.downloadSlug || "replay"}_replay.html`, html);
   } catch (err) {
-    alert("Download failed: " + (err.message || err));
+    showToast("Download failed: " + errText(err), "error");
   } finally {
     dlHtmlBtn.disabled = false;
   }
@@ -207,8 +308,10 @@ posterDl.addEventListener("click", async () => {
   const meta = sessionMeta(state.points, state.dateLabel);
   const caption = shareCaption(meta, APP_URL);
   await copyText(caption);
-  const slug = state.downloadSlug || "replay";
-  await downloadCanvasPng(posterCanvas, `${slug}_poster.png`);
+  await downloadCanvasPng(
+    posterCanvas,
+    `${state.downloadSlug || "replay"}_poster.png`
+  );
   posterDl.textContent = "Downloaded · caption copied";
   setTimeout(() => {
     posterDl.textContent = "Download PNG + copy caption";
@@ -224,3 +327,11 @@ captionBtn.addEventListener("click", async () => {
     captionBtn.textContent = "Copy caption";
   }, 1500);
 });
+
+// Boot check
+if (typeof L === "undefined") {
+  setStatus(
+    "Map library failed to load (Leaflet). Reload the page or check ad-blockers.",
+    "error"
+  );
+}

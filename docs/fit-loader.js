@@ -1,10 +1,10 @@
 /**
  * Load GPS points from a FIT ArrayBuffer or a File (.fit / .zip).
- * Uses fit-file-parser + JSZip from jsDelivr (browser ESM).
+ * Vendored ESM bundles (no CDN dependency at runtime).
  */
 
-import FitParser from "https://cdn.jsdelivr.net/npm/fit-file-parser@4.1.0/+esm";
-import JSZip from "https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm";
+import FitParser from "./vendor/fit-parser.esm.js";
+import JSZip from "./vendor/jszip.esm.js";
 
 const HKT = "Asia/Hong_Kong";
 
@@ -27,18 +27,41 @@ function formatHktDateLabel(date) {
   }).format(date);
 }
 
+function errMsg(error) {
+  if (error == null) return "Unknown error";
+  if (typeof error === "string") return error;
+  if (error.message) return error.message;
+  return String(error);
+}
+
 function parseFitBuffer(buffer) {
+  // Ensure ArrayBuffer (some browsers give SharedArrayBuffer views)
+  const ab =
+    buffer instanceof ArrayBuffer
+      ? buffer
+      : buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+
   return new Promise((resolve, reject) => {
-    const parser = new FitParser({
-      force: true,
-      speedUnit: "km/h",
-      lengthUnit: "m",
-      temperatureUnit: "celsius",
-    });
-    parser.parse(buffer, (error, data) => {
-      if (error) reject(error);
-      else resolve(data);
-    });
+    try {
+      const Parser = FitParser?.default ?? FitParser;
+      if (typeof Parser !== "function") {
+        reject(new Error("FIT parser failed to load"));
+        return;
+      }
+      const parser = new Parser({
+        force: true,
+        speedUnit: "km/h",
+        lengthUnit: "m",
+        temperatureUnit: "celsius",
+      });
+      parser.parse(ab, (error, data) => {
+        if (error) reject(new Error(errMsg(error)));
+        else if (!data) reject(new Error("FIT parse returned no data"));
+        else resolve(data);
+      });
+    } catch (e) {
+      reject(e instanceof Error ? e : new Error(errMsg(e)));
+    }
   });
 }
 
@@ -54,6 +77,8 @@ export function recordsToPoints(data) {
     const lat = rec.position_lat;
     const lon = rec.position_long;
     if (lat == null || lon == null) continue;
+    // Skip invalid / unfixed GPS
+    if (lat === 0 && lon === 0) continue;
 
     let ts = rec.timestamp;
     if (!(ts instanceof Date)) ts = new Date(ts);
@@ -77,7 +102,9 @@ export function recordsToPoints(data) {
   }
 
   if (!points.length) {
-    throw new Error("No GPS points found in this FIT file.");
+    throw new Error(
+      "No GPS points found in this FIT file. Export the full activity (.fit) from Garmin Connect, not a summary."
+    );
   }
 
   let dateLabel = formatHktDateLabel(startTs);
@@ -105,37 +132,69 @@ async function extractFitFromZip(buffer) {
     (n) => n.toLowerCase().endsWith(".fit") && !zip.files[n].dir
   );
   if (!names.length) {
-    throw new Error("No .fit file found inside the zip.");
+    throw new Error("No .fit file found inside the zip. Use a Garmin activity export.");
   }
-  // Prefer ACTIVITY.fit style names
   names.sort((a, b) => {
-    const score = (n) =>
-      /activity/i.test(n) ? 0 : /_ACTIVITY\.fit$/i.test(n) ? 0 : 1;
+    const score = (n) => (/activity/i.test(n) ? 0 : 1);
     return score(a) - score(b) || a.localeCompare(b);
   });
   return zip.files[names[0]].async("arraybuffer");
+}
+
+function looksLikeZip(name, type, buffer) {
+  if (name.endsWith(".zip") || type === "application/zip" || type === "application/x-zip-compressed") {
+    return true;
+  }
+  // PK magic
+  if (buffer && buffer.byteLength >= 2) {
+    const u8 = new Uint8Array(buffer);
+    if (u8[0] === 0x50 && u8[1] === 0x4b) return true;
+  }
+  return false;
+}
+
+function looksLikeFit(buffer) {
+  if (!buffer || buffer.byteLength < 12) return false;
+  const u8 = new Uint8Array(buffer);
+  // bytes 8-11 should be ".FIT"
+  return (
+    String.fromCharCode(u8[8], u8[9], u8[10], u8[11]) === ".FIT"
+  );
 }
 
 /**
  * @param {File|Blob} file
  */
 export async function loadFromFile(file) {
+  if (!file) throw new Error("No file selected");
   const name = (file.name || "").toLowerCase();
   const buffer = await file.arrayBuffer();
 
-  if (name.endsWith(".zip") || file.type === "application/zip") {
+  if (buffer.byteLength < 12) {
+    throw new Error("File is empty or too small to be a Garmin activity.");
+  }
+
+  if (looksLikeZip(name, file.type, buffer)) {
     const fitBuf = await extractFitFromZip(buffer);
     return loadFitArrayBuffer(fitBuf);
   }
-  if (name.endsWith(".fit") || !name.includes(".")) {
+
+  if (name.endsWith(".fit") || looksLikeFit(buffer)) {
     return loadFitArrayBuffer(buffer);
   }
-  // Try FIT first, then zip
+
+  // Last resort: try FIT then zip
   try {
     return await loadFitArrayBuffer(buffer);
-  } catch {
-    const fitBuf = await extractFitFromZip(buffer);
-    return loadFitArrayBuffer(fitBuf);
+  } catch (fitErr) {
+    try {
+      const fitBuf = await extractFitFromZip(buffer);
+      return await loadFitArrayBuffer(fitBuf);
+    } catch {
+      throw new Error(
+        `Could not read “${file.name}” as FIT or zip. ${errMsg(fitErr)}`
+      );
+    }
   }
 }
 
