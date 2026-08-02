@@ -198,13 +198,14 @@ export async function loadFromFile(file) {
   }
 }
 
-/** Synthetic paddling loop — same idea as Python demo_points. */
+/** Synthetic paddling loop — same idea as Python demo_points (Victoria Harbour water). */
 export function demoPoints(count = 360, durationSec = 2400) {
   const start = new Date("2026-01-15T02:00:00.000Z"); // 10:00 HKT
-  const centerLat = 22.318;
-  const centerLon = 114.168;
-  const latAmp = 0.006;
-  const lonAmp = 0.01;
+  // Victoria Harbour between Central / TST — open water on satellite
+  const centerLat = 22.2905;
+  const centerLon = 114.17;
+  const latAmp = 0.0035;
+  const lonAmp = 0.014;
   const points = [];
   let distanceM = 0;
 

@@ -74,10 +74,15 @@ def load_points(fit_path: Path) -> list[dict]:
 
 
 def demo_points(count: int = 360, duration_sec: float = 2400) -> list[dict]:
-    """Synthetic paddling loop for the public demo — not real GPS data."""
+    """Synthetic paddling loop for the public demo — not real GPS data.
+
+    Centered in Victoria Harbour (open water), elongated E–W along the channel
+    so satellite view clearly shows water, not land.
+    """
     start = datetime(2026, 1, 15, 10, 0, 0, tzinfo=HK)
-    center_lat, center_lon = 22.3180, 114.1680
-    lat_amp, lon_amp = 0.006, 0.010
+    # Victoria Harbour between Central / TST — water only
+    center_lat, center_lon = 22.2905, 114.1700
+    lat_amp, lon_amp = 0.0035, 0.014  # wider east–west along the harbour
     points: list[dict] = []
     distance_m = 0.0
 
