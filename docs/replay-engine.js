@@ -53,7 +53,7 @@ export function createReplay(POINTS) {
   const maxSpeedRaw = Math.max(...POINTS.map((p) => p.speed), 1);
   const maxHrRaw = Math.max(...POINTS.map((p) => Number(p.hr) || 0), 1);
   const CHART = {
-    padL: 48,
+    padL: 56, // room for vertical unit label + tick numbers
     padR: 16,
     padT: 10,
     padB: 28,
@@ -82,9 +82,9 @@ export function createReplay(POINTS) {
   function chartGeom() {
     const dpr = window.devicePixelRatio || 1;
     const rect = chartCanvas.getBoundingClientRect();
-    // Wide side pads so tick numbers (e.g. 200, 28) never crowd the plot edge
-    const padR = showHr && showSpeed ? 48 : showHr ? 48 : 12;
-    const padL = 48;
+    // Side pads: ticks + vertical unit label (rotated km/h / bpm)
+    const padR = showHr && showSpeed ? 56 : showHr ? 56 : 12;
+    const padL = 56;
     if (
       !chartGeomCache ||
       chartGeomCache.w !== rect.width ||
@@ -151,11 +151,24 @@ export function createReplay(POINTS) {
     chartCtx.stroke();
   }
 
+  /** Draw a vertical axis unit label (reads bottom→top). */
+  function drawVerticalUnit(text, x, yCenter, color) {
+    chartCtx.save();
+    chartCtx.fillStyle = color;
+    chartCtx.font = "600 11px -apple-system, BlinkMacSystemFont, sans-serif";
+    chartCtx.textAlign = "center";
+    chartCtx.textBaseline = "middle";
+    chartCtx.translate(x, yCenter);
+    chartCtx.rotate(-Math.PI / 2);
+    chartCtx.fillText(text, 0, 0);
+    chartCtx.restore();
+  }
+
   function drawChartBase() {
     const { w, h, plotW, plotH } = chartGeomCache;
     chartCtx.clearRect(0, 0, w, h);
 
-    // Plot background only — unit labels live in the HTML toggles (km/h / bpm)
+    // Plot background
     chartCtx.fillStyle = "#12122a";
     chartCtx.fillRect(CHART.padL, CHART.padT, plotW, plotH);
     chartCtx.strokeStyle = "#0f3460";
@@ -165,7 +178,7 @@ export function createReplay(POINTS) {
     chartCtx.font = "11px -apple-system, BlinkMacSystemFont, sans-serif";
     chartCtx.textBaseline = "middle";
 
-    // Left axis ticks (speed, or HR if speed off)
+    // Left axis ticks (speed, or HR if speed off) — numbers only
     if (showSpeed) {
       for (let tick = 0; tick <= CHART.maxSpeed; tick += 4) {
         const y = speedToY(tick, plotH);
@@ -202,6 +215,17 @@ export function createReplay(POINTS) {
         const y = hrToY(tick, plotH);
         chartCtx.fillText(String(tick), CHART.padL + plotW + 10, y);
       }
+    }
+
+    // Vertical unit labels outside the tick column (no overlap with numbers)
+    const midY = CHART.padT + plotH / 2;
+    if (showSpeed) {
+      drawVerticalUnit("km/h", 12, midY, "#86efac");
+    } else if (showHr) {
+      drawVerticalUnit("bpm", 12, midY, "#fda4af");
+    }
+    if (showHr && showSpeed) {
+      drawVerticalUnit("bpm", w - 12, midY, "#fda4af");
     }
 
     // Time axis
