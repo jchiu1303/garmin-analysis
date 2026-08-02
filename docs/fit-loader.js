@@ -198,14 +198,16 @@ export async function loadFromFile(file) {
   }
 }
 
-/** Synthetic paddling loop — same idea as Python demo_points (Victoria Harbour water). */
+/** Synthetic paddling loop — same idea as Python demo_points (irregular harbour water). */
 export function demoPoints(count = 360, durationSec = 2400) {
   const start = new Date("2026-01-15T02:00:00.000Z"); // 10:00 HKT
-  // Victoria Harbour between Central / TST — open water on satellite
-  const centerLat = 22.2905;
-  const centerLon = 114.17;
-  const latAmp = 0.0035;
-  const lonAmp = 0.014;
+  // Mid-harbour channel (south of TST, north of Central) — open water only
+  const centerLat = 22.2875;
+  const centerLon = 114.168;
+  const latMin = 22.2845;
+  const latMax = 22.2905;
+  const lonMin = 114.152;
+  const lonMax = 114.184;
   const points = [];
   let distanceM = 0;
 
@@ -213,12 +215,34 @@ export function demoPoints(count = 360, durationSec = 2400) {
     const frac = i / Math.max(count - 1, 1);
     const elapsed = frac * durationSec;
     const ts = new Date(start.getTime() + elapsed * 1000);
-    const angle = frac * 2 * Math.PI * 1.2;
-    const lat = centerLat + latAmp * Math.cos(angle);
-    const lon = centerLon + lonAmp * Math.sin(angle);
+    // ~1.08 loops; phase π/2 → start mid-channel on eastern leg (not shoreline)
+    const t = frac * 2 * Math.PI * 1.08 + Math.PI / 2;
+
+    // Elongated E–W path with irregular harmonics (not a clean ellipse)
+    let lon =
+      centerLon +
+      0.013 * Math.sin(t) +
+      0.0028 * Math.sin(2.3 * t + 0.4) +
+      0.0014 * Math.cos(3.7 * t) +
+      0.0009 * Math.sin(5.1 * t + 1.2) +
+      0.0005 * Math.cos(frac * Math.PI * 2.5);
+    let lat =
+      centerLat +
+      0.0018 * Math.cos(t) +
+      0.001 * Math.sin(2.1 * t + 0.7) +
+      0.0006 * Math.cos(4.2 * t + 0.3) +
+      0.00045 * Math.sin(6.0 * t) +
+      0.00035 * Math.sin(frac * Math.PI * 3.0);
+
+    lat = Math.min(latMax, Math.max(latMin, lat));
+    lon = Math.min(lonMax, Math.max(lonMin, lon));
+
     const speed = Math.max(
       0,
-      3 + 8 * Math.abs(Math.sin(angle * 2.5)) + 2 * Math.sin(frac * 24)
+      3.5 +
+        7 * Math.abs(Math.sin(t * 1.7 + 0.2)) +
+        2.5 * Math.sin(frac * 18) +
+        1.2 * Math.abs(Math.sin(t * 3.3))
     );
 
     if (i > 0) {
@@ -228,7 +252,7 @@ export function demoPoints(count = 360, durationSec = 2400) {
       distanceM += Math.hypot(dlat, dlon);
     }
 
-    const cadence = speed > 2 ? Math.round(38 + 12 * Math.abs(Math.sin(angle * 1.8))) : 0;
+    const cadence = speed > 2 ? Math.round(38 + 12 * Math.abs(Math.sin(t * 1.8))) : 0;
     points.push({
       t: formatHktTime(ts),
       elapsed: Math.round(elapsed * 10) / 10,

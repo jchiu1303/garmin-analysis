@@ -76,13 +76,17 @@ def load_points(fit_path: Path) -> list[dict]:
 def demo_points(count: int = 360, duration_sec: float = 2400) -> list[dict]:
     """Synthetic paddling loop for the public demo — not real GPS data.
 
-    Centered in Victoria Harbour (open water), elongated E–W along the channel
-    so satellite view clearly shows water, not land.
+    Irregular mid-channel route in Victoria Harbour (open water only).
+    Not a perfect ellipse: harmonics + slight lane drift; clamped to a
+    conservative water bounding box so no samples sit on land.
     """
     start = datetime(2026, 1, 15, 10, 0, 0, tzinfo=HK)
-    # Victoria Harbour between Central / TST — water only
-    center_lat, center_lon = 22.2905, 114.1700
-    lat_amp, lon_amp = 0.0035, 0.014  # wider east–west along the harbour
+    # Mid-harbour channel (south of TST, north of Central / Wan Chai)
+    center_lat, center_lon = 22.2875, 114.1680
+    # Tight water box — every point is forced inside
+    lat_min, lat_max = 22.2845, 22.2905
+    lon_min, lon_max = 114.1520, 114.1840
+
     points: list[dict] = []
     distance_m = 0.0
 
@@ -90,10 +94,37 @@ def demo_points(count: int = 360, duration_sec: float = 2400) -> list[dict]:
         frac = i / max(count - 1, 1)
         elapsed = frac * duration_sec
         timestamp = start + timedelta(seconds=elapsed)
-        angle = frac * 2 * math.pi * 1.2
-        lat = center_lat + lat_amp * math.cos(angle)
-        lon = center_lon + lon_amp * math.sin(angle)
-        speed = max(0, 3 + 8 * abs(math.sin(angle * 2.5)) + 2 * math.sin(frac * 24))
+        # ~1.08 loops; phase π/2 → start mid-channel on the eastern leg (not N/S shore)
+        t = frac * 2 * math.pi * 1.08 + math.pi / 2
+
+        # Elongated E–W path with irregular harmonics (not a clean ellipse)
+        lon = (
+            center_lon
+            + 0.0130 * math.sin(t)
+            + 0.0028 * math.sin(2.3 * t + 0.4)
+            + 0.0014 * math.cos(3.7 * t)
+            + 0.0009 * math.sin(5.1 * t + 1.2)
+            + 0.0005 * math.cos(frac * math.pi * 2.5)
+        )
+        lat = (
+            center_lat
+            + 0.0018 * math.cos(t)
+            + 0.0010 * math.sin(2.1 * t + 0.7)
+            + 0.0006 * math.cos(4.2 * t + 0.3)
+            + 0.00045 * math.sin(6.0 * t)
+            + 0.00035 * math.sin(frac * math.pi * 3.0)  # slow lane drift
+        )
+
+        lat = min(lat_max, max(lat_min, lat))
+        lon = min(lon_max, max(lon_min, lon))
+
+        speed = max(
+            0.0,
+            3.5
+            + 7.0 * abs(math.sin(t * 1.7 + 0.2))
+            + 2.5 * math.sin(frac * 18)
+            + 1.2 * abs(math.sin(t * 3.3)),
+        )
 
         if i > 0:
             prev = points[-1]
@@ -101,7 +132,7 @@ def demo_points(count: int = 360, duration_sec: float = 2400) -> list[dict]:
             dlon = (lon - prev["lon"]) * 111_000 * math.cos(math.radians(lat))
             distance_m += math.hypot(dlat, dlon)
 
-        cadence = int(38 + 12 * abs(math.sin(angle * 1.8))) if speed > 2 else 0
+        cadence = int(38 + 12 * abs(math.sin(t * 1.8))) if speed > 2 else 0
         points.append(
             _make_point(
                 time_str=timestamp.strftime("%H:%M:%S"),
