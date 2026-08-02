@@ -22,6 +22,9 @@ header span { font-size: 13px; color: #94a3b8; }
 .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 .swatch-speed { background: #2ecc71; }
 .swatch-hr { background: #e94560; }
+.unit-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.03em; color: #94a3b8; margin-left: 2px; }
+.chart-toggle:has(#toggle-speed:checked) .unit-tag { color: #86efac; }
+.chart-toggle:has(#toggle-hr:checked) .unit-tag { color: #fda4af; }
 .chart-stage { position: relative; }
 #speed-chart { width: 100%; height: 160px; display: block; cursor: crosshair; }
 #chart-cursor { position: absolute; top: 0; left: 0; width: 0; height: 100%; pointer-events: none; will-change: transform; }
@@ -89,8 +92,8 @@ export async function buildReplayHtml(points, title, dateLabel) {
   <div class="chart-header">
     <h2>Timeline</h2>
     <div class="chart-toggles">
-      <label class="chart-toggle"><input type="checkbox" id="toggle-speed" checked> <span class="swatch swatch-speed"></span> Speed</label>
-      <label class="chart-toggle"><input type="checkbox" id="toggle-hr"> <span class="swatch swatch-hr"></span> Heart rate</label>
+      <label class="chart-toggle"><input type="checkbox" id="toggle-speed" checked> <span class="swatch swatch-speed"></span> Speed <span class="unit-tag">km/h</span></label>
+      <label class="chart-toggle"><input type="checkbox" id="toggle-hr"> <span class="swatch swatch-hr"></span> Heart rate <span class="unit-tag">bpm</span></label>
     </div>
     <span class="chart-hint">Space play/pause · ←→ step · 1–5 speed · click chart</span>
   </div>

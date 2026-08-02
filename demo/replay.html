@@ -18,14 +18,17 @@ header span { font-size: 13px; color: #94a3b8; }
 .chart-header h2 { font-size: 13px; font-weight: 600; color: #eee; }
 .chart-hint { font-size: 11px; color: #94a3b8; }
 .chart-toggles { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-.chart-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #cbd5e1; cursor: pointer; user-select: none; }
+.chart-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #e2e8f0; cursor: pointer; user-select: none; padding: 5px 10px; border-radius: 6px; background: rgba(15, 52, 96, 0.45); border: 1px solid #0f3460; }
 .chart-toggle input { accent-color: #e94560; cursor: pointer; }
 .chart-toggle input:disabled { cursor: not-allowed; opacity: 0.5; }
-.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); flex-shrink: 0; }
 .swatch-speed { background: #2ecc71; }
 .swatch-hr { background: #e94560; }
+.unit-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.03em; color: #94a3b8; margin-left: 2px; }
+.chart-toggle:has(#toggle-speed:checked) .unit-tag { color: #86efac; }
+.chart-toggle:has(#toggle-hr:checked) .unit-tag { color: #fda4af; }
 .chart-stage { position: relative; }
-#speed-chart { width: 100%; height: 160px; display: block; cursor: crosshair; }
+#speed-chart { width: 100%; height: 180px; display: block; cursor: crosshair; }
 #chart-cursor { position: absolute; top: 0; left: 0; width: 0; height: 100%; pointer-events: none; will-change: transform; }
 .chart-cursor-line { position: absolute; top: 12px; bottom: 28px; left: -1px; width: 2px; background: #94a3b8; box-shadow: 0 0 6px rgba(148,163,184,0.4); }
 .chart-cursor-dot { position: absolute; left: -5px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 6px rgba(0,0,0,0.45); transform: translateY(-50%); }
@@ -72,8 +75,8 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px;
   <div class="chart-header">
     <h2>Timeline</h2>
     <div class="chart-toggles">
-      <label class="chart-toggle"><input type="checkbox" id="toggle-speed" checked> <span class="swatch swatch-speed"></span> Speed</label>
-      <label class="chart-toggle"><input type="checkbox" id="toggle-hr"> <span class="swatch swatch-hr"></span> Heart rate</label>
+      <label class="chart-toggle"><input type="checkbox" id="toggle-speed" checked> <span class="swatch swatch-speed"></span> Speed <span class="unit-tag">km/h</span></label>
+      <label class="chart-toggle"><input type="checkbox" id="toggle-hr"> <span class="swatch swatch-hr"></span> Heart rate <span class="unit-tag">bpm</span></label>
     </div>
     <span class="chart-hint">Space play/pause · ←→ step · 1–5 speed · click chart</span>
   </div>
@@ -148,10 +151,10 @@ const HAS_HR = POINTS.some((p) => Number(p.hr) > 0);
 const maxSpeedRaw = Math.max(...POINTS.map((p) => p.speed), 1);
 const maxHrRaw = Math.max(...POINTS.map((p) => Number(p.hr) || 0), 1);
 const CHART = {
-  padL: 42,
+  padL: 48,
   padR: 16,
-  padT: 22, // room for unit labels above the plot
-  padB: 30,
+  padT: 10,
+  padB: 28,
   maxSpeed: Math.ceil(maxSpeedRaw + 1),
   maxHr: Math.max(120, Math.ceil(maxHrRaw / 10) * 10 + 10),
 };
@@ -177,8 +180,9 @@ if (toggleHr) {
 function chartGeom() {
   const dpr = window.devicePixelRatio || 1;
   const rect = chartCanvas.getBoundingClientRect();
-  const padR = showHr && showSpeed ? 44 : showHr ? 42 : 14;
-  const padL = 42;
+  // Wide side pads so tick numbers (e.g. 200, 28) never crowd the plot edge
+  const padR = showHr && showSpeed ? 48 : showHr ? 48 : 12;
+  const padL = 48;
   if (
     !chartGeomCache ||
     chartGeomCache.w !== rect.width ||
@@ -249,72 +253,52 @@ function drawChartBase() {
   const { w, h, plotW, plotH } = chartGeomCache;
   chartCtx.clearRect(0, 0, w, h);
 
-  // Plot background
+  // Plot background only — unit labels live in the HTML toggles (km/h / bpm)
   chartCtx.fillStyle = "#12122a";
   chartCtx.fillRect(CHART.padL, CHART.padT, plotW, plotH);
   chartCtx.strokeStyle = "#0f3460";
   chartCtx.lineWidth = 1;
   chartCtx.strokeRect(CHART.padL + 0.5, CHART.padT + 0.5, plotW - 1, plotH - 1);
 
-  // Unit badges sit *above* the plot so they never cover tick numbers
-  const unitY = CHART.padT - 7;
-  chartCtx.font = "600 11px -apple-system, BlinkMacSystemFont, sans-serif";
-  if (showSpeed) {
-    chartCtx.fillStyle = "#2ecc71";
-    chartCtx.textAlign = "left";
-    chartCtx.fillText("km/h", CHART.padL, unitY);
-  }
-  if (showHr && !showSpeed) {
-    chartCtx.fillStyle = "#ff6b81";
-    chartCtx.textAlign = "left";
-    chartCtx.fillText("bpm", CHART.padL, unitY);
-  }
-  if (showHr && showSpeed) {
-    chartCtx.fillStyle = "#ff6b81";
-    chartCtx.textAlign = "right";
-    chartCtx.fillText("bpm", CHART.padL + plotW, unitY);
-  }
-
-  // Grid + left axis (speed when on, else HR)
   chartCtx.font = "11px -apple-system, BlinkMacSystemFont, sans-serif";
+  chartCtx.textBaseline = "middle";
+
+  // Left axis ticks (speed, or HR if speed off)
   if (showSpeed) {
     for (let tick = 0; tick <= CHART.maxSpeed; tick += 4) {
       const y = speedToY(tick, plotH);
-      chartCtx.strokeStyle = "rgba(15, 52, 96, 0.9)";
+      chartCtx.strokeStyle = "rgba(15, 52, 96, 0.85)";
       chartCtx.beginPath();
       chartCtx.moveTo(CHART.padL, y);
       chartCtx.lineTo(CHART.padL + plotW, y);
       chartCtx.stroke();
-      chartCtx.fillStyle = "#94a3b8";
+      chartCtx.fillStyle = "#cbd5e1";
       chartCtx.textAlign = "right";
-      chartCtx.textBaseline = "middle";
-      chartCtx.fillText(String(tick), CHART.padL - 8, y);
+      chartCtx.fillText(String(tick), CHART.padL - 10, y);
     }
   } else if (showHr) {
     const step = CHART.maxHr > 160 ? 20 : 10;
     for (let tick = 0; tick <= CHART.maxHr; tick += step) {
       const y = hrToY(tick, plotH);
-      chartCtx.strokeStyle = "rgba(15, 52, 96, 0.9)";
+      chartCtx.strokeStyle = "rgba(15, 52, 96, 0.85)";
       chartCtx.beginPath();
       chartCtx.moveTo(CHART.padL, y);
       chartCtx.lineTo(CHART.padL + plotW, y);
       chartCtx.stroke();
-      chartCtx.fillStyle = "#94a3b8";
+      chartCtx.fillStyle = "#fda4af";
       chartCtx.textAlign = "right";
-      chartCtx.textBaseline = "middle";
-      chartCtx.fillText(String(tick), CHART.padL - 8, y);
+      chartCtx.fillText(String(tick), CHART.padL - 10, y);
     }
   }
 
-  // Right axis (HR) when both series are shown
+  // Right axis ticks for HR when both are on
   if (showHr && showSpeed) {
     const step = CHART.maxHr > 160 ? 20 : 10;
-    chartCtx.fillStyle = "#ff8fa3";
+    chartCtx.fillStyle = "#fda4af";
     chartCtx.textAlign = "left";
-    chartCtx.textBaseline = "middle";
     for (let tick = 0; tick <= CHART.maxHr; tick += step) {
       const y = hrToY(tick, plotH);
-      chartCtx.fillText(String(tick), CHART.padL + plotW + 8, y);
+      chartCtx.fillText(String(tick), CHART.padL + plotW + 10, y);
     }
   }
 
@@ -329,25 +313,27 @@ function drawChartBase() {
     chartCtx.fillText(
       POINTS[idx].t.slice(0, 5),
       progressToX(idx / (POINTS.length - 1), plotW),
-      h - 8
+      h - 6
     );
   }
-  chartCtx.fillStyle = "#64748b";
-  chartCtx.font = "10px -apple-system, BlinkMacSystemFont, sans-serif";
-  chartCtx.fillText("HKT", CHART.padL + plotW / 2, h - 20);
 
-  // Series
+  // Series (clip to plot so lines stay inside the frame)
+  chartCtx.save();
+  chartCtx.beginPath();
+  chartCtx.rect(CHART.padL, CHART.padT, plotW, plotH);
+  chartCtx.clip();
   if (showSpeed) {
-    drawSeries((p, plotH) => speedToY(p.speed, plotH), "#2ecc71", "rgba(46, 204, 113, 0.12)");
+    drawSeries((p, ph) => speedToY(p.speed, ph), "#2ecc71", "rgba(46, 204, 113, 0.12)");
   }
   if (showHr && HAS_HR) {
-    drawSeries((p, plotH) => hrToY(p.hr || 0, plotH), "#e94560", null);
+    drawSeries((p, ph) => hrToY(p.hr || 0, ph), "#e94560", null);
   }
+  chartCtx.restore();
 
-  chartCtx.textBaseline = "alphabetic";
   if (!showSpeed && !showHr) {
     chartCtx.fillStyle = "#94a3b8";
     chartCtx.textAlign = "center";
+    chartCtx.textBaseline = "middle";
     chartCtx.font = "12px -apple-system, BlinkMacSystemFont, sans-serif";
     chartCtx.fillText(
       "Enable Speed and/or Heart rate above",
