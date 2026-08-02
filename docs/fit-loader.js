@@ -198,16 +198,28 @@ export async function loadFromFile(file) {
   }
 }
 
-/** Synthetic paddling loop — same idea as Python demo_points (irregular harbour water). */
+/** Synthetic paddling loop — same as Python demo_points (mid-harbour waypoints). */
 export function demoPoints(count = 360, durationSec = 2400) {
   const start = new Date("2026-01-15T02:00:00.000Z"); // 10:00 HKT
-  // Mid-harbour channel (south of TST, north of Central) — open water only
-  const centerLat = 22.2875;
-  const centerLon = 114.168;
-  const latMin = 22.2845;
-  const latMax = 22.2905;
-  const lonMin = 114.152;
-  const lonMax = 114.184;
+  // Mid-channel Victoria Harbour only (hand-placed; not a shoreline ellipse)
+  const waypoints = [
+    [22.2892, 114.1585],
+    [22.2896, 114.161],
+    [22.289, 114.1638],
+    [22.2888, 114.1665],
+    [22.2894, 114.1692],
+    [22.2898, 114.1715],
+    [22.2893, 114.1738],
+    [22.2887, 114.1755],
+    [22.288, 114.174],
+    [22.2876, 114.1712],
+    [22.2878, 114.1685],
+    [22.2882, 114.1658],
+    [22.2886, 114.163],
+    [22.2889, 114.1605],
+    [22.2892, 114.1585],
+  ];
+  const nSeg = waypoints.length - 1;
   const points = [];
   let distanceM = 0;
 
@@ -215,34 +227,25 @@ export function demoPoints(count = 360, durationSec = 2400) {
     const frac = i / Math.max(count - 1, 1);
     const elapsed = frac * durationSec;
     const ts = new Date(start.getTime() + elapsed * 1000);
-    // ~1.08 loops; phase π/2 → start mid-channel on eastern leg (not shoreline)
-    const t = frac * 2 * Math.PI * 1.08 + Math.PI / 2;
 
-    // Elongated E–W path with irregular harmonics (not a clean ellipse)
-    let lon =
-      centerLon +
-      0.013 * Math.sin(t) +
-      0.0028 * Math.sin(2.3 * t + 0.4) +
-      0.0014 * Math.cos(3.7 * t) +
-      0.0009 * Math.sin(5.1 * t + 1.2) +
-      0.0005 * Math.cos(frac * Math.PI * 2.5);
-    let lat =
-      centerLat +
-      0.0018 * Math.cos(t) +
-      0.001 * Math.sin(2.1 * t + 0.7) +
-      0.0006 * Math.cos(4.2 * t + 0.3) +
-      0.00045 * Math.sin(6.0 * t) +
-      0.00035 * Math.sin(frac * Math.PI * 3.0);
+    const along = frac * nSeg;
+    const seg = Math.min(Math.floor(along), nSeg - 1);
+    const local = along - seg;
+    const u = local * local * (3 - 2 * local);
+    const [lat0, lon0] = waypoints[seg];
+    const [lat1, lon1] = waypoints[seg + 1];
+    let lat = lat0 + (lat1 - lat0) * u;
+    let lon = lon0 + (lon1 - lon0) * u;
 
-    lat = Math.min(latMax, Math.max(latMin, lat));
-    lon = Math.min(lonMax, Math.max(lonMin, lon));
+    lat += Math.sin(frac * Math.PI * 11.3) * 0.00012;
+    lon += Math.cos(frac * Math.PI * 7.1 + 0.6) * 0.0001;
 
     const speed = Math.max(
       0,
-      3.5 +
-        7 * Math.abs(Math.sin(t * 1.7 + 0.2)) +
-        2.5 * Math.sin(frac * 18) +
-        1.2 * Math.abs(Math.sin(t * 3.3))
+      4 +
+        6.5 * Math.abs(Math.sin(frac * Math.PI * 9 + seg * 0.4)) +
+        2 * Math.sin(frac * 17) +
+        Math.abs(Math.sin(along * 2.2))
     );
 
     if (i > 0) {
@@ -252,7 +255,8 @@ export function demoPoints(count = 360, durationSec = 2400) {
       distanceM += Math.hypot(dlat, dlon);
     }
 
-    const cadence = speed > 2 ? Math.round(38 + 12 * Math.abs(Math.sin(t * 1.8))) : 0;
+    const cadence =
+      speed > 2 ? Math.round(38 + 12 * Math.abs(Math.sin(frac * Math.PI * 14))) : 0;
     points.push({
       t: formatHktTime(ts),
       elapsed: Math.round(elapsed * 10) / 10,

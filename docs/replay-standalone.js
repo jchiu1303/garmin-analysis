@@ -224,8 +224,13 @@ function elapsedNow() {
 function pause() {
   if (playing) {
     const state = stateAtElapsed(elapsedNow());
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+    setPlaying(false);
+    // Snap slider + visuals to the pause sample so ←/→ step from here
     slider.value = state.idx;
-    applyState(state, false);
+    update(state.idx);
+    return;
   }
   if (rafId) cancelAnimationFrame(rafId);
   rafId = null;
@@ -272,16 +277,23 @@ function play() {
 }
 
 function scrubTo(idx) {
+  // Sync to live playback position first (slider is stale while playing)
+  if (playing) pause();
   const i = Math.max(0, Math.min(POINTS.length - 1, idx));
-  pause();
   slider.value = i;
   update(i);
+}
+
+/** Step ←/→ from the true current sample (pause anchor if mid-play). */
+function stepBy(delta) {
+  if (playing) pause();
+  scrubTo(+slider.value + delta);
 }
 
 // --- Event listeners ---
 playBtn.addEventListener("click", () => (playing ? pause() : play()));
 slider.addEventListener("input", (e) => {
-  pause();
+  if (playing) pause();
   update(+e.target.value);
 });
 speedBtns.addEventListener("click", (e) => {
@@ -292,7 +304,7 @@ chartCanvas.addEventListener("click", (e) => {
   const rect = chartCanvas.getBoundingClientRect();
   const { plotW } = chartGeom();
   const idx = Math.round(xToProgress(e.clientX - rect.left, plotW) * (POINTS.length - 1));
-  pause();
+  if (playing) pause();
   slider.value = idx;
   update(idx);
 });
@@ -308,10 +320,10 @@ document.addEventListener("keydown", (e) => {
     playing ? pause() : play();
   } else if (e.code === "ArrowLeft") {
     e.preventDefault();
-    scrubTo(+slider.value - 1);
+    stepBy(-1);
   } else if (e.code === "ArrowRight") {
     e.preventDefault();
-    scrubTo(+slider.value + 1);
+    stepBy(1);
   } else if (SPEED_KEYS[e.key]) {
     e.preventDefault();
     setPlaybackRate(SPEED_KEYS[e.key]);

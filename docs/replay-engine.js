@@ -277,8 +277,13 @@ export function createReplay(POINTS) {
   function pause() {
     if (playing) {
       const state = stateAtElapsed(elapsedNow());
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+      setPlaying(false);
+      // Snap slider + visuals to the pause sample so ←/→ step from here
       slider.value = String(state.idx);
-      applyState(state, false);
+      update(state.idx);
+      return;
     }
     if (rafId) cancelAnimationFrame(rafId);
     rafId = null;
@@ -327,15 +332,22 @@ export function createReplay(POINTS) {
   }
 
   function scrubTo(idx) {
+    // Sync to live playback position first (slider is stale while playing)
+    if (playing) pause();
     const i = Math.max(0, Math.min(POINTS.length - 1, idx));
-    pause();
     slider.value = String(i);
     update(i);
   }
 
+  /** Step ←/→ from the true current sample (pause anchor if mid-play). */
+  function stepBy(delta) {
+    if (playing) pause();
+    scrubTo(+slider.value + delta);
+  }
+
   const onPlayClick = () => (playing ? pause() : play());
   const onSlider = (e) => {
-    pause();
+    if (playing) pause();
     update(+e.target.value);
   };
   const onSpeed = (e) => {
@@ -348,7 +360,7 @@ export function createReplay(POINTS) {
     const idx = Math.round(
       xToProgress(e.clientX - rect.left, plotW) * (POINTS.length - 1)
     );
-    pause();
+    if (playing) pause();
     slider.value = String(idx);
     update(idx);
   };
@@ -368,10 +380,10 @@ export function createReplay(POINTS) {
       playing ? pause() : play();
     } else if (e.code === "ArrowLeft") {
       e.preventDefault();
-      scrubTo(+slider.value - 1);
+      stepBy(-1);
     } else if (e.code === "ArrowRight") {
       e.preventDefault();
-      scrubTo(+slider.value + 1);
+      stepBy(1);
     } else if (SPEED_KEYS[e.key]) {
       e.preventDefault();
       setPlaybackRate(SPEED_KEYS[e.key]);

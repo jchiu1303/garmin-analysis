@@ -76,54 +76,64 @@ def load_points(fit_path: Path) -> list[dict]:
 def demo_points(count: int = 360, duration_sec: float = 2400) -> list[dict]:
     """Synthetic paddling loop for the public demo — not real GPS data.
 
-    Irregular mid-channel route in Victoria Harbour (open water only).
-    Not a perfect ellipse: harmonics + slight lane drift; clamped to a
-    conservative water bounding box so no samples sit on land.
+    Hand-placed mid-channel Victoria Harbour waypoints (open water only),
+    interpolated with small irregular offsets so the route is not a clean
+    ellipse and never rides the shoreline.
     """
     start = datetime(2026, 1, 15, 10, 0, 0, tzinfo=HK)
-    # Mid-harbour channel (south of TST, north of Central / Wan Chai)
-    center_lat, center_lon = 22.2875, 114.1680
-    # Tight water box — every point is forced inside
-    lat_min, lat_max = 22.2845, 22.2905
-    lon_min, lon_max = 114.1520, 114.1840
+    # Mid-channel only: south of TST Star Ferry (~22.294), north of Central
+    # piers (~22.282). Stays well clear of reclamation / ferry piers.
+    # (lat, lon) — closed loop, west → east → west on a slightly southern return
+    waypoints = [
+        (22.2892, 114.1585),
+        (22.2896, 114.1610),
+        (22.2890, 114.1638),
+        (22.2888, 114.1665),
+        (22.2894, 114.1692),
+        (22.2898, 114.1715),
+        (22.2893, 114.1738),
+        (22.2887, 114.1755),  # eastern turn (still west of Hung Hom shore)
+        (22.2880, 114.1740),  # return, slightly south
+        (22.2876, 114.1712),
+        (22.2878, 114.1685),
+        (22.2882, 114.1658),
+        (22.2886, 114.1630),
+        (22.2889, 114.1605),
+        (22.2892, 114.1585),  # close loop
+    ]
 
     points: list[dict] = []
     distance_m = 0.0
+    n_seg = len(waypoints) - 1
 
     for i in range(count):
         frac = i / max(count - 1, 1)
         elapsed = frac * duration_sec
         timestamp = start + timedelta(seconds=elapsed)
-        # ~1.08 loops; phase π/2 → start mid-channel on the eastern leg (not N/S shore)
-        t = frac * 2 * math.pi * 1.08 + math.pi / 2
 
-        # Elongated E–W path with irregular harmonics (not a clean ellipse)
-        lon = (
-            center_lon
-            + 0.0130 * math.sin(t)
-            + 0.0028 * math.sin(2.3 * t + 0.4)
-            + 0.0014 * math.cos(3.7 * t)
-            + 0.0009 * math.sin(5.1 * t + 1.2)
-            + 0.0005 * math.cos(frac * math.pi * 2.5)
-        )
-        lat = (
-            center_lat
-            + 0.0018 * math.cos(t)
-            + 0.0010 * math.sin(2.1 * t + 0.7)
-            + 0.0006 * math.cos(4.2 * t + 0.3)
-            + 0.00045 * math.sin(6.0 * t)
-            + 0.00035 * math.sin(frac * math.pi * 3.0)  # slow lane drift
-        )
+        # Position along the waypoint loop (0..n_seg)
+        along = frac * n_seg
+        seg = min(int(along), n_seg - 1)
+        local = along - seg
+        # smoothstep for less robotic corners
+        u = local * local * (3 - 2 * local)
+        lat0, lon0 = waypoints[seg]
+        lat1, lon1 = waypoints[seg + 1]
+        lat = lat0 + (lat1 - lat0) * u
+        lon = lon0 + (lon1 - lon0) * u
 
-        lat = min(lat_max, max(lat_min, lat))
-        lon = min(lon_max, max(lon_min, lon))
+        # Small irregular wobble (stays ~tens of metres; mid-channel is wide enough)
+        wobble = math.sin(frac * math.pi * 11.3) * 0.00012
+        wobble2 = math.cos(frac * math.pi * 7.1 + 0.6) * 0.00010
+        lat += wobble
+        lon += wobble2
 
         speed = max(
             0.0,
-            3.5
-            + 7.0 * abs(math.sin(t * 1.7 + 0.2))
-            + 2.5 * math.sin(frac * 18)
-            + 1.2 * abs(math.sin(t * 3.3)),
+            4.0
+            + 6.5 * abs(math.sin(frac * math.pi * 9 + seg * 0.4))
+            + 2.0 * math.sin(frac * 17)
+            + 1.0 * abs(math.sin(along * 2.2)),
         )
 
         if i > 0:
@@ -132,7 +142,7 @@ def demo_points(count: int = 360, duration_sec: float = 2400) -> list[dict]:
             dlon = (lon - prev["lon"]) * 111_000 * math.cos(math.radians(lat))
             distance_m += math.hypot(dlat, dlon)
 
-        cadence = int(38 + 12 * abs(math.sin(t * 1.8))) if speed > 2 else 0
+        cadence = int(38 + 12 * abs(math.sin(frac * math.pi * 14))) if speed > 2 else 0
         points.append(
             _make_point(
                 time_str=timestamp.strftime("%H:%M:%S"),
