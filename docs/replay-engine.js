@@ -49,9 +49,9 @@ export function createReplay(POINTS) {
   const toggleHr = document.getElementById("toggle-hr");
   const chartCtx = chartCanvas.getContext("2d");
 
-  const HAS_HR = POINTS.some((p) => (p.hr || 0) > 0);
+  const HAS_HR = POINTS.some((p) => Number(p.hr) > 0);
   const maxSpeedRaw = Math.max(...POINTS.map((p) => p.speed), 1);
-  const maxHrRaw = Math.max(...POINTS.map((p) => p.hr || 0), 1);
+  const maxHrRaw = Math.max(...POINTS.map((p) => Number(p.hr) || 0), 1);
   const CHART = {
     padL: 44,
     padR: 16,
@@ -62,18 +62,22 @@ export function createReplay(POINTS) {
   };
   let chartGeomCache = null;
   let showSpeed = true;
-  let showHr = false;
+  // Default HR overlay ON when the file has bpm data
+  let showHr = HAS_HR;
 
-  if (toggleHr) {
-    if (!HAS_HR) {
-      toggleHr.disabled = true;
-      toggleHr.title = "No heart rate in this file";
-      const lab = toggleHr.closest("label");
-      if (lab) lab.title = "No heart rate in this file";
-    }
-    toggleHr.checked = false;
-  }
   if (toggleSpeed) toggleSpeed.checked = true;
+  if (toggleHr) {
+    toggleHr.disabled = !HAS_HR;
+    toggleHr.checked = HAS_HR;
+    toggleHr.title = HAS_HR
+      ? "Show heart rate on the chart"
+      : "No heart rate in this file";
+    const lab = toggleHr.closest("label");
+    if (lab) {
+      lab.title = toggleHr.title;
+      lab.style.opacity = HAS_HR ? "" : "0.55";
+    }
+  }
 
   function chartGeom() {
     const dpr = window.devicePixelRatio || 1;

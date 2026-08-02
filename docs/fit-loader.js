@@ -68,12 +68,29 @@ function parseFitBuffer(buffer) {
 /**
  * @returns {{ points: object[], dateLabel: string, startIso: string }}
  */
+function extractHr(rec) {
+  const raw =
+    rec.heart_rate ??
+    rec.heartRate ??
+    rec.enhanced_heart_rate ??
+    rec.HeartRate ??
+    null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0 || n > 250) return 0;
+  return Math.round(n);
+}
+
 export function recordsToPoints(data) {
   const records = data.records || [];
   const points = [];
   let startTs = null;
+  // Carry forward last HR — some FITs put HR on records without a GPS fix
+  let lastHr = 0;
 
   for (const rec of records) {
+    const sampleHr = extractHr(rec);
+    if (sampleHr > 0) lastHr = sampleHr;
+
     const lat = rec.position_lat;
     const lon = rec.position_long;
     if (lat == null || lon == null) continue;
@@ -89,7 +106,7 @@ export function recordsToPoints(data) {
     const speed = rec.enhanced_speed ?? rec.speed ?? 0;
     const cadence = rec.cadence ?? 0;
     const distance = rec.distance ?? 0;
-    const hr = rec.heart_rate ?? 0;
+    const hr = sampleHr > 0 ? sampleHr : lastHr;
 
     points.push({
       t: formatHktTime(ts),
@@ -99,7 +116,7 @@ export function recordsToPoints(data) {
       speed: Math.round(Number(speed) * 100) / 100,
       cadence: Math.round(Number(cadence)) || 0,
       distance: Math.round(Number(distance) * 10) / 10,
-      hr: Math.round(Number(hr)) || 0,
+      hr,
     });
   }
 
