@@ -10,10 +10,10 @@ header span { font-size: 13px; color: #94a3b8; }
 .chart-header h2 { font-size: 13px; font-weight: 600; color: #eee; }
 .chart-hint { font-size: 11px; color: #94a3b8; }
 .chart-toggles { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-.chart-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #cbd5e1; cursor: pointer; user-select: none; }
+.chart-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #e2e8f0; cursor: pointer; user-select: none; padding: 4px 8px; border-radius: 6px; background: rgba(15, 52, 96, 0.45); border: 1px solid #0f3460; }
 .chart-toggle input { accent-color: #e94560; cursor: pointer; }
 .chart-toggle input:disabled { cursor: not-allowed; opacity: 0.5; }
-.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); }
 .swatch-speed { background: #2ecc71; }
 .swatch-hr { background: #e94560; }
 .chart-stage { position: relative; }
