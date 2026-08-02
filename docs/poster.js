@@ -429,7 +429,7 @@ export async function recordStoryTimelapse(points, title, dateLabel, appUrl, onP
     if (onProgress) onProgress((frameIndex + 1) / totalFrames);
   }
 
-  // Prefer real MP4 (QuickTime-compatible) via WebCodecs
+  // Prefer real H.264 MP4 (QuickTime / Photos / IG) via WebCodecs + Mediabunny
   if (supportsWebCodecsMp4()) {
     try {
       const blob = await encodeCanvasMp4(canvas, paintFrame, {
@@ -438,17 +438,21 @@ export async function recordStoryTimelapse(points, title, dateLabel, appUrl, onP
         fps,
         totalFrames,
       });
-      return { blob, mime: "video/mp4", ext: "mp4", meta };
+      if (await blobLooksLikeH264Mp4(blob)) {
+        return { blob, mime: "video/mp4", ext: "mp4", meta };
+      }
+      console.warn("[story] Encoder returned non-H.264 MP4; falling back");
     } catch (err) {
       console.warn("[story] WebCodecs MP4 failed, falling back:", err);
     }
   }
 
-  // Fallback: MediaRecorder (often WebM — may not open in QuickTime)
+  // Fallback: MediaRecorder — NEVER claim .mp4 unless avc1 is explicit.
+  // Chrome's bare "video/mp4" is often VP9-in-MP4, which QuickTime rejects.
   const mime = pickRecorderMime();
   const stream = canvas.captureStream(fps);
   const recorder = new MediaRecorder(stream, {
-    mimeType: mime,
+    mimeType: mime || undefined,
     videoBitsPerSecond: 6_000_000,
   });
   const chunks = [];
@@ -456,23 +460,31 @@ export async function recordStoryTimelapse(points, title, dateLabel, appUrl, onP
     if (e.data && e.data.size) chunks.push(e.data);
   };
   const done = new Promise((resolve, reject) => {
-    recorder.onstop = () => resolve(new Blob(chunks, { type: mime }));
+    recorder.onstop = () =>
+      resolve(new Blob(chunks, { type: mime || "video/webm" }));
     recorder.onerror = () => reject(new Error("Recording failed"));
   });
   recorder.start(100);
 
   for (let i = 0; i < totalFrames; i++) {
     paintFrame(i);
-    // let the capture pipeline grab the frame
     await new Promise((r) => setTimeout(r, 1000 / fps));
   }
-  // hold last frame a beat
   await new Promise((r) => setTimeout(r, 200));
   recorder.stop();
   stream.getTracks().forEach((tr) => tr.stop());
   const blob = await done;
-  const ext = mime.includes("mp4") ? "mp4" : "webm";
-  return { blob, mime, ext, meta };
+
+  // Only label as mp4 when the container is actually H.264
+  if (isAvcMime(mime) && (await blobLooksLikeH264Mp4(blob))) {
+    return { blob, mime: "video/mp4", ext: "mp4", meta };
+  }
+  // VP9/WebM (or VP9-in-MP4): ship as .webm so QuickTime isn't opened on a lie
+  const safeBlob =
+    blob.type && blob.type.includes("webm")
+      ? blob
+      : new Blob([blob], { type: "video/webm" });
+  return { blob: safeBlob, mime: "video/webm", ext: "webm", meta };
 }
 
 function supportsWebCodecsMp4() {
@@ -483,106 +495,101 @@ function supportsWebCodecsMp4() {
   );
 }
 
+function isAvcMime(mime) {
+  if (!mime) return false;
+  const m = mime.toLowerCase();
+  return m.includes("avc1") || m.includes("avc3") || m.includes("h264");
+}
+
+/** True when ftyp brands look like H.264 (not vp09 / hev1 only). */
+async function blobLooksLikeH264Mp4(blob) {
+  if (!blob || blob.size < 32) return false;
+  const head = new Uint8Array(await blob.slice(0, 64).arrayBuffer());
+  let ascii = "";
+  for (let i = 0; i < head.length; i++) {
+    const c = head[i];
+    ascii += c >= 32 && c < 127 ? String.fromCharCode(c) : ".";
+  }
+  if (!ascii.includes("ftyp")) return false;
+  if (ascii.includes("vp09") || ascii.includes("vp08") || ascii.includes("av01")) {
+    return false;
+  }
+  // Prefer explicit avc brands; also accept isom/mp41 from our muxer
+  return (
+    ascii.includes("avc1") ||
+    ascii.includes("iso2") ||
+    ascii.includes("isom") ||
+    ascii.includes("mp41")
+  );
+}
+
 /**
- * Encode painted canvas frames to H.264 MP4 (plays in QuickTime / Photos / IG).
+ * Encode painted canvas frames to H.264 MP4 (QuickTime / Photos / Instagram).
+ * Uses Mediabunny CanvasSource (successor to mp4-muxer).
  */
 async function encodeCanvasMp4(canvas, paintFrame, { width, height, fps, totalFrames }) {
-  const { Muxer, ArrayBufferTarget } = await import(
-    "https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/+esm"
-  );
+  const {
+    Output,
+    Mp4OutputFormat,
+    BufferTarget,
+    CanvasSource,
+    QUALITY_HIGH,
+    canEncodeVideo,
+  } = await import("https://cdn.jsdelivr.net/npm/mediabunny@1.52.2/+esm");
 
-  // Prefer baseline/main profiles widely supported by QuickTime
-  const codecCandidates = [
-    "avc1.42001f", // Baseline 3.1
-    "avc1.4d001f", // Main 3.1
-    "avc1.64001f", // High 3.1
-  ];
-  let codec = null;
-  for (const c of codecCandidates) {
-    try {
-      const check = await VideoEncoder.isConfigSupported({
-        codec: c,
-        width,
-        height,
-        bitrate: 5_000_000,
-        framerate: fps,
-      });
-      if (check.supported) {
-        codec = c;
-        break;
-      }
-    } catch {
-      /* try next */
-    }
-  }
-  if (!codec) {
-    throw new Error("No H.264 VideoEncoder config supported");
+  const ok = await canEncodeVideo("avc", { width, height });
+  if (!ok) {
+    throw new Error("This browser cannot encode H.264 (AVC) video");
   }
 
-  const target = new ArrayBufferTarget();
-  const muxer = new Muxer({
+  const target = new BufferTarget();
+  const output = new Output({
+    format: new Mp4OutputFormat({ fastStart: "in-memory" }),
     target,
-    video: {
-      codec: "avc",
-      width,
-      height,
-    },
-    fastStart: "in-memory",
-    firstTimestampBehavior: "offset",
   });
 
-  let encodeError = null;
-  const encoder = new VideoEncoder({
-    output: (chunk, meta) => {
-      muxer.addVideoChunk(chunk, meta);
-    },
-    error: (e) => {
-      encodeError = e;
-    },
+  const videoSource = new CanvasSource(canvas, {
+    codec: "avc",
+    quality: QUALITY_HIGH,
+    keyFrameInterval: 1, // 1s keyframes — safer for scrubbing / IG
+    latencyMode: "quality",
+    hardwareAcceleration: "no-preference",
   });
-  encoder.configure({
-    codec,
-    width,
-    height,
-    bitrate: 5_000_000,
-    framerate: fps,
-    // hardware acceleration when available
-    hardwareAcceleration: "prefer-hardware",
-    avc: { format: "avc" },
-  });
+  output.addVideoTrack(videoSource, { frameRate: fps });
+  await output.start();
 
-  const frameDuration = 1_000_000 / fps; // µs
+  const dt = 1 / fps;
   for (let i = 0; i < totalFrames; i++) {
-    if (encodeError) throw encodeError;
     paintFrame(i);
-    const frame = new VideoFrame(canvas, {
-      timestamp: Math.round(i * frameDuration),
-      duration: Math.round(frameDuration),
-    });
-    encoder.encode(frame, { keyFrame: i % fps === 0 });
-    frame.close();
-    // Yield so UI can update progress
+    // Capture current canvas pixels as this frame
+    await videoSource.add(i * dt, dt);
     if (i % 5 === 0) await new Promise((r) => setTimeout(r, 0));
   }
-
-  await encoder.flush();
-  encoder.close();
-  muxer.finalize();
+  videoSource.close();
+  await output.finalize();
+  if (!target.buffer || target.buffer.byteLength < 64) {
+    throw new Error("MP4 encode produced empty output");
+  }
   return new Blob([target.buffer], { type: "video/mp4" });
 }
 
+/**
+ * Prefer real H.264. Never pick bare "video/mp4" — Chrome often records VP9
+ * into an .mp4 container, which QuickTime cannot play.
+ */
 function pickRecorderMime() {
+  if (typeof MediaRecorder === "undefined") return "video/webm";
   const candidates = [
-    "video/mp4",
+    'video/mp4;codecs="avc1.42001E"',
+    "video/mp4;codecs=avc1.42001E",
+    "video/mp4;codecs=avc1.42E01E",
     "video/mp4;codecs=avc1",
     "video/webm;codecs=vp9",
     "video/webm;codecs=vp8",
     "video/webm",
   ];
   for (const m of candidates) {
-    if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(m)) {
-      return m;
-    }
+    if (MediaRecorder.isTypeSupported(m)) return m;
   }
   return "video/webm";
 }

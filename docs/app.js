@@ -393,8 +393,8 @@ if (storyDl) {
       storyDl.textContent = "Video downloaded";
       const tip =
         ext === "mp4"
-          ? "MP4 saved — opens in QuickTime, Photos, and Instagram Stories."
-          : "Saved as WebM (this browser couldn’t make MP4). Open in Chrome/VLC, or convert for QuickTime.";
+          ? "H.264 MP4 saved — opens in QuickTime, Photos, and Instagram Stories."
+          : "Saved as WebM (browser couldn’t make H.264). Use Chrome/Edge for QuickTime-ready MP4, or open in VLC.";
       setShareStatus(`${tip} Caption copied.`, ext === "mp4" ? "" : "error");
     } catch (err) {
       console.error("[story-dl]", err);
