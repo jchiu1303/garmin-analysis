@@ -9,33 +9,40 @@
   <meta property="og:description" content="Turn Garmin FIT / zip exports into a shareable map + speed replay. Private — all processing in your browser." />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="app.css" />
   <link rel="stylesheet" href="replay.css" />
 </head>
 <body>
-  <!-- Global toast (visible on landing + player) -->
   <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
 
-  <!-- Landing -->
+  <!-- Landing — Cayman-style project page -->
   <section id="landing" class="landing">
-    <div class="landing-inner">
-      <p class="eyebrow">Garmin · dragon boat / SUP</p>
-      <h1>Interactive map replay</h1>
-      <p class="lede">
-        Drop a Garmin <strong>.fit</strong> or activity <strong>.zip</strong>.
-        Watch the route on satellite + speed chart. Download HTML or a poster for social.
-      </p>
-      <p class="privacy">
-        <span class="lock">🔒</span>
-        Fully private: files stay in your browser. Nothing is uploaded to a server.
+    <header class="page-header">
+      <h1 class="project-name">Dragon Boat Replay</h1>
+      <h2 class="project-tagline">
+        Garmin FIT → interactive map &amp; speed chart. Private — runs in your browser.
+      </h2>
+      <a href="https://github.com/jchiu1303/garmin-analysis" class="btn">View on GitHub</a>
+      <a href="https://github.com/jchiu1303/garmin-analysis/zipball/main" class="btn">Download .zip</a>
+      <button type="button" id="demo-btn" class="btn">Try demo</button>
+    </header>
+
+    <main class="main-content">
+      <h2>Upload your activity</h2>
+      <p>
+        Drop a Garmin <strong>.fit</strong> or activity <strong>.zip</strong> from Garmin Connect.
+        Watch the route on satellite imagery with a synced speed chart, then download a
+        self-contained HTML replay or a social poster.
       </p>
 
-      <!-- label-for association: works on iOS/Safari (no programmatic .click()) -->
       <label id="dropzone" class="dropzone" for="file-input">
-        <div class="dropzone-icon">📁</div>
-        <p><strong>Drop file here</strong> or click to browse</p>
-        <p class="hint">.fit · .zip (Garmin Connect export)</p>
+        <div class="dropzone-icon" aria-hidden="true">📁</div>
+        <p class="dropzone-title"><strong>Drop file here</strong> or click to browse</p>
+        <p class="dropzone-hint">Accepts <code>.fit</code> and <code>.zip</code></p>
       </label>
       <input
         id="file-input"
@@ -46,31 +53,78 @@
 
       <p id="status" class="status" hidden></p>
 
-      <div class="actions-row">
-        <button type="button" id="demo-btn" class="btn btn-ghost">Try synthetic demo</button>
-      </div>
+      <h2>Privacy</h2>
+      <blockquote>
+        <p>
+          Fully private: your GPS stays on your device. Nothing is uploaded to a server —
+          parsing happens entirely in the browser.
+        </p>
+      </blockquote>
 
-      <footer class="landing-foot">
-        <a href="https://github.com/jchiu1303/garmin-analysis">GitHub</a>
-        · open source · GitHub Pages
+      <h2>Features</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Satellite map</td>
+            <td>Esri imagery with full route + live boat marker</td>
+          </tr>
+          <tr>
+            <td>Speed chart</td>
+            <td>Click to jump; cursor synced with map</td>
+          </tr>
+          <tr>
+            <td>Playback</td>
+            <td>0.25×–4× · keyboard shortcuts · scrub slider</td>
+          </tr>
+          <tr>
+            <td>Share</td>
+            <td>Download HTML · poster PNG · copy caption for social</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Keyboard (in replay)</h2>
+      <ul>
+        <li><kbd>Space</kbd> play / pause</li>
+        <li><kbd>←</kbd> <kbd>→</kbd> step one GPS point</li>
+        <li><kbd>1</kbd>–<kbd>5</kbd> playback speed</li>
+      </ul>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner">
+          <a href="https://github.com/jchiu1303/garmin-analysis">garmin-analysis</a>
+          is maintained by
+          <a href="https://github.com/jchiu1303">jchiu1303</a>.
+        </span>
+        <span class="site-footer-credits">
+          Styled after the
+          <a href="https://github.com/pages-themes/cayman">Cayman</a>
+          GitHub Pages theme · Open source
+        </span>
       </footer>
-    </div>
+    </main>
   </section>
 
-  <!-- Player -->
+  <!-- Player (dark map UI — separate from landing chrome) -->
   <section id="player" class="player" hidden>
     <header class="app-header">
       <div class="app-header-left">
-        <button type="button" id="back-btn" class="btn btn-ghost btn-sm">← New file</button>
+        <button type="button" id="back-btn" class="btn-player btn-player-ghost">← New file</button>
         <div>
           <h1 id="session-title">Dragon Boat Replay</h1>
           <span id="session-meta" class="session-meta"></span>
         </div>
       </div>
       <div class="share-bar">
-        <button type="button" id="dl-html-btn" class="btn btn-primary btn-sm">Download HTML</button>
-        <button type="button" id="poster-btn" class="btn btn-secondary btn-sm">Share poster</button>
-        <button type="button" id="caption-btn" class="btn btn-ghost btn-sm">Copy caption</button>
+        <button type="button" id="dl-html-btn" class="btn-player btn-player-primary">Download HTML</button>
+        <button type="button" id="poster-btn" class="btn-player btn-player-secondary">Share poster</button>
+        <button type="button" id="caption-btn" class="btn-player btn-player-ghost">Copy caption</button>
       </div>
     </header>
 
@@ -116,17 +170,16 @@
     </div>
   </section>
 
-  <!-- Poster modal -->
   <div id="poster-modal" class="modal" hidden>
     <div class="modal-card">
       <div class="modal-head">
         <h2>Share poster</h2>
-        <button type="button" id="poster-close" class="btn btn-ghost btn-sm">Close</button>
+        <button type="button" id="poster-close" class="btn-player btn-player-ghost">Close</button>
       </div>
       <p class="modal-hint">Save the image for Instagram / Stories / X. Caption is copied when you download.</p>
       <canvas id="poster-canvas" width="1080" height="1350"></canvas>
       <div class="modal-actions">
-        <button type="button" id="poster-dl" class="btn btn-primary">Download PNG + copy caption</button>
+        <button type="button" id="poster-dl" class="btn-player btn-player-primary btn-block">Download PNG + copy caption</button>
       </div>
     </div>
   </div>

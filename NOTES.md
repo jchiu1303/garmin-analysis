@@ -5,9 +5,10 @@ Handoff for new sessions.
 ## Now (2026-08-02)
 - FIT → interactive dragon boat replay HTML — **stable** (Python CLI)
 - **Web app (MVP A)** in `docs/` — browser upload FIT/zip → replay → download HTML + poster PNG
+- Landing styled like GitHub Pages **Cayman** theme (static CSS, still `.nojekyll` SPA)
 - Local preview: `cd docs && python3 -m http.server 8877` → http://127.0.0.1:8877/
-- **Enable Pages:** Settings → Pages → `main` / `/docs` → https://jchiu1303.github.io/garmin-analysis/
-- Privacy: client-side only (fit-file-parser + JSZip via jsDelivr)
+- Live: https://jchiu1303.github.io/garmin-analysis/
+- Privacy: client-side only; FIT/JSZip **vendored** under `docs/vendor/`
 - Real sessions under `Dragonboat/` (local); inbox zips in `data/` (gitignored)
 
 ## Local sessions
