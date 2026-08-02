@@ -5,6 +5,8 @@ import {
   drawPoster,
   shareCaption,
   downloadCanvasPng,
+  downloadBlob,
+  recordStoryTimelapse,
   copyText,
 } from "./poster.js";
 
@@ -24,6 +26,8 @@ const posterModal = document.getElementById("poster-modal");
 const posterCanvas = document.getElementById("poster-canvas");
 const posterClose = document.getElementById("poster-close");
 const posterDl = document.getElementById("poster-dl");
+const storyDl = document.getElementById("story-dl");
+const shareStatus = document.getElementById("share-status");
 
 const APP_URL =
   window.location.origin +
@@ -287,40 +291,123 @@ dlHtmlBtn.addEventListener("click", async () => {
   }
 });
 
-function openPosterModal() {
+function setShareStatus(msg, kind = "") {
+  if (!shareStatus) return;
+  if (!msg) {
+    shareStatus.hidden = true;
+    shareStatus.textContent = "";
+    shareStatus.className = "share-status";
+    return;
+  }
+  shareStatus.hidden = false;
+  shareStatus.textContent = msg;
+  shareStatus.className = `share-status ${kind}`.trim();
+}
+
+async function openPosterModal() {
   if (!state.points) return;
-  drawPoster(
-    posterCanvas,
-    state.points,
-    state.title,
-    state.dateLabel,
-    APP_URL
-  );
   posterModal.hidden = false;
+  setShareStatus("Loading satellite map…", "");
+  posterDl.disabled = true;
+  if (storyDl) storyDl.disabled = true;
+  try {
+    await drawPoster(
+      posterCanvas,
+      state.points,
+      state.title,
+      state.dateLabel,
+      APP_URL
+    );
+    setShareStatus("Map ready — download still or story video.", "");
+  } catch (err) {
+    console.error("[poster]", err);
+    setShareStatus(errText(err), "error");
+  } finally {
+    posterDl.disabled = false;
+    if (storyDl) storyDl.disabled = false;
+  }
 }
 
 posterBtn.addEventListener("click", openPosterModal);
 posterClose.addEventListener("click", () => {
   posterModal.hidden = true;
+  setShareStatus("");
 });
 posterModal.addEventListener("click", (e) => {
-  if (e.target === posterModal) posterModal.hidden = true;
+  if (e.target === posterModal) {
+    posterModal.hidden = true;
+    setShareStatus("");
+  }
 });
 
 posterDl.addEventListener("click", async () => {
   if (!state.points) return;
-  const meta = sessionMeta(state.points, state.dateLabel);
-  const caption = shareCaption(meta, APP_URL);
-  await copyText(caption);
-  await downloadCanvasPng(
-    posterCanvas,
-    `${state.downloadSlug || "replay"}_poster.png`
-  );
-  posterDl.textContent = "Downloaded · caption copied";
-  setTimeout(() => {
-    posterDl.textContent = "Download PNG + copy caption";
-  }, 2000);
+  posterDl.disabled = true;
+  try {
+    const meta = sessionMeta(state.points, state.dateLabel);
+    await copyText(shareCaption(meta, APP_URL));
+    await downloadCanvasPng(
+      posterCanvas,
+      `${state.downloadSlug || "replay"}_poster.png`
+    );
+    posterDl.textContent = "Downloaded · caption copied";
+    setShareStatus("PNG saved. Caption on clipboard.", "");
+  } catch (err) {
+    console.error("[poster-dl]", err);
+    setShareStatus(
+      errText(err) + " — try again; some browsers block export if tiles fail CORS.",
+      "error"
+    );
+  } finally {
+    posterDl.disabled = false;
+    setTimeout(() => {
+      posterDl.textContent = "Download PNG + copy caption";
+    }, 2200);
+  }
 });
+
+if (storyDl) {
+  storyDl.addEventListener("click", async () => {
+    if (!state.points) return;
+    if (typeof MediaRecorder === "undefined") {
+      setShareStatus("Video export not supported in this browser.", "error");
+      return;
+    }
+    storyDl.disabled = true;
+    posterDl.disabled = true;
+    const prevLabel = storyDl.textContent;
+    try {
+      setShareStatus("Recording story timelapse…", "");
+      storyDl.textContent = "Recording…";
+      const { blob, ext, meta } = await recordStoryTimelapse(
+        state.points,
+        state.title,
+        state.dateLabel,
+        APP_URL,
+        (p) => {
+          storyDl.textContent = `Recording… ${Math.round(p * 100)}%`;
+        }
+      );
+      await copyText(shareCaption(meta, APP_URL));
+      downloadBlob(blob, `${state.downloadSlug || "replay"}_story.${ext}`);
+      storyDl.textContent = "Video downloaded";
+      setShareStatus(
+        `Story video saved (.${ext}). Caption copied. Upload to Instagram Stories.`,
+        ""
+      );
+    } catch (err) {
+      console.error("[story-dl]", err);
+      setShareStatus(errText(err), "error");
+      storyDl.textContent = prevLabel;
+    } finally {
+      storyDl.disabled = false;
+      posterDl.disabled = false;
+      setTimeout(() => {
+        storyDl.textContent = "Download story timelapse video";
+      }, 2500);
+    }
+  });
+}
 
 captionBtn.addEventListener("click", async () => {
   if (!state.points) return;
