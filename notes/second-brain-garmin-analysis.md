@@ -1,4 +1,4 @@
-# Garmin Dragon Boat Analysis — Second Brain
+# Paddle Replay (garmin-analysis) — Second Brain
 
 **Tags:** #garmin #dragonboat #fit #gps #side-project #data-viz  
 **Status:** Active  

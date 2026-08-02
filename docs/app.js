@@ -36,7 +36,7 @@ const APP_URL =
 let state = {
   points: null,
   dateLabel: "",
-  title: "Dragon Boat Replay",
+  title: "Paddle Replay",
   replay: null,
   downloadSlug: "replay",
   busy: false,
@@ -148,7 +148,7 @@ async function openSession({ points, dateLabel, title }) {
 
   state.points = points;
   state.dateLabel = dateLabel;
-  state.title = title || "Dragon Boat Replay";
+  state.title = title || "Paddle Replay";
 
   const meta = sessionMeta(points, dateLabel);
   document.getElementById("session-title").textContent = state.title;
@@ -185,7 +185,7 @@ async function handleFile(file) {
     await openSession({
       points,
       dateLabel,
-      title: "Dragon Boat Replay",
+      title: "Paddle Replay",
     });
   } catch (err) {
     console.error("[upload]", err);
@@ -253,7 +253,7 @@ async function startDemo() {
     await openSession({
       points,
       dateLabel,
-      title: "Dragon Boat Replay (Demo)",
+      title: "Paddle Replay (Demo)",
     });
   } catch (err) {
     console.error("[demo]", err);

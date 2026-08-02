@@ -7,7 +7,7 @@ import { sessionMeta } from "./fit-loader.js";
 
 export function shareCaption(meta, appUrl) {
   return [
-    `🐉 Dragon boat · ${meta.totalKm} km · ${meta.date}`,
+    `🐉 Paddle Replay · ${meta.totalKm} km · ${meta.date}`,
     `${meta.start}–${meta.end} HKT`,
     "",
     `Make your own map replay (private, in-browser):`,

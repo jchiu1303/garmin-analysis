@@ -1,6 +1,8 @@
-# Garmin Dragon Boat Analysis
+# Paddle Replay
 
-Interactive replay and analysis for Garmin FIT activity files (SUP / paddling profile).
+Interactive map replay for Garmin FIT activity files — dragon boat, SUP, and paddling.
+
+**Product name:** Paddle Replay · **Code folder / GitHub repo:** `garmin-analysis` (rename on GitHub if you want the URL to match)
 
 **Repo:** https://github.com/jchiu1303/garmin-analysis (public)  
 **Web app (GitHub Pages):** https://jchiu1303.github.io/garmin-analysis/  

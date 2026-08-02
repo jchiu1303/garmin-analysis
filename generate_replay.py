@@ -12,7 +12,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("fit_file", type=Path, nargs="?", help="Path to .fit activity file")
     parser.add_argument("-o", "--output", type=Path, help="Output HTML path")
-    parser.add_argument("--title", default="Dragon Boat Replay")
+    parser.add_argument("--title", default="Paddle Replay")
     parser.add_argument("--date", help="Date label shown in header")
     parser.add_argument("--demo", action="store_true", help="Synthetic demo data (no FIT file)")
     args = parser.parse_args()
@@ -20,7 +20,7 @@ def main() -> None:
     if args.demo:
         points = demo_points()
         date_label = args.date or "Demo session"
-        title = args.title if args.title != "Dragon Boat Replay" else "Dragon Boat Replay (Demo)"
+        title = args.title if args.title != "Paddle Replay" else "Paddle Replay (Demo)"
         output = args.output or Path("demo/replay.html")
     else:
         if not args.fit_file:
