@@ -1,0 +1,301 @@
+/* Landing + chrome (replay.css covers map/player body styles) */
+
+.landing {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(233, 69, 96, 0.18), transparent),
+    #1a1a2e;
+}
+
+.landing-inner {
+  width: 100%;
+  max-width: 520px;
+}
+
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #e94560;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.landing h1 {
+  font-size: clamp(28px, 5vw, 36px);
+  font-weight: 700;
+  line-height: 1.15;
+  margin-bottom: 12px;
+}
+
+.lede {
+  font-size: 16px;
+  color: #cbd5e1;
+  line-height: 1.55;
+  margin-bottom: 16px;
+}
+
+.lede strong {
+  color: #eee;
+}
+
+.privacy {
+  font-size: 13px;
+  color: #94a3b8;
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  line-height: 1.45;
+}
+
+.lock {
+  flex-shrink: 0;
+}
+
+.dropzone {
+  border: 2px dashed #0f3460;
+  border-radius: 14px;
+  background: #16213e;
+  padding: 36px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  outline: none;
+}
+
+.dropzone:hover,
+.dropzone:focus-visible {
+  border-color: #e94560;
+  background: #1a2744;
+}
+
+.dropzone.dragover {
+  border-color: #00d4aa;
+  background: rgba(0, 212, 170, 0.08);
+}
+
+.dropzone-icon {
+  font-size: 32px;
+  margin-bottom: 10px;
+}
+
+.dropzone p {
+  font-size: 15px;
+  color: #eee;
+}
+
+.dropzone .hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.status {
+  margin-top: 14px;
+  font-size: 13px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.status.error {
+  color: #ff6b81;
+}
+
+.status.busy {
+  color: #00d4aa;
+}
+
+.actions-row {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.landing-foot {
+  margin-top: 28px;
+  text-align: center;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.landing-foot a {
+  color: #94a3b8;
+}
+
+.btn {
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btn-sm {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.btn-primary {
+  background: #e94560;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #ff6b81;
+}
+
+.btn-secondary {
+  background: #0f3460;
+  color: #eee;
+  border: 1px solid #1e4a7a;
+}
+
+.btn-secondary:hover {
+  border-color: #e94560;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid #0f3460;
+}
+
+.btn-ghost:hover {
+  color: #eee;
+  border-color: #64748b;
+}
+
+/* Player chrome */
+.player {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a2e;
+  color: #eee;
+}
+
+.app-header {
+  padding: 10px 16px;
+  background: #16213e;
+  border-bottom: 1px solid #0f3460;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.app-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.app-header h1 {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-meta {
+  font-size: 12px;
+  color: #94a3b8;
+  display: block;
+}
+
+.share-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal[hidden] {
+  display: none;
+}
+
+.modal-card {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 14px;
+  padding: 16px;
+  max-width: 420px;
+  width: 100%;
+  max-height: 95vh;
+  overflow: auto;
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.modal-head h2 {
+  font-size: 16px;
+}
+
+.modal-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+#poster-canvas {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+  background: #1a1a2e;
+}
+
+.modal-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: stretch;
+}
+
+.modal-actions .btn {
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .app-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .share-bar {
+    justify-content: stretch;
+  }
+  .share-bar .btn {
+    flex: 1;
+  }
+}

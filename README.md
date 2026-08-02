@@ -3,18 +3,37 @@
 Interactive replay and analysis for Garmin FIT activity files (SUP / paddling profile).
 
 **Repo:** https://github.com/jchiu1303/garmin-analysis (public)  
+**Web app (GitHub Pages):** https://jchiu1303.github.io/garmin-analysis/  
 **Second brain:** [notes/second-brain-garmin-analysis.md](notes/second-brain-garmin-analysis.md)
+
+## Web app (browser — no install)
+
+Static app in [`docs/`](docs/) — upload a Garmin `.fit` or activity `.zip`, play the map replay, download HTML or a social **poster PNG**.
+
+| | |
+|--|--|
+| **Privacy** | All parsing runs **in your browser**. Files are never uploaded to a server. |
+| **Share** | Download self-contained `*_replay.html` · poster PNG + caption for IG/X · link others to the app |
+| **Local preview** | `cd docs && python3 -m http.server 8877` → http://127.0.0.1:8877/ |
+
+### Enable GitHub Pages
+
+1. Repo **Settings → Pages**
+2. Source: **Deploy from a branch**
+3. Branch: `main` · folder: **`/docs`**
+4. Save → site at `https://jchiu1303.github.io/garmin-analysis/`
 
 ## Privacy model
 
 | Location | What's there |
 |----------|----------------|
-| **GitHub (public)** | `demo/replay.html` with **synthetic** GPS/speed data only |
-| **Local machine** | Real `.fit` files, real `replay.html`, CSV/PNG exports |
+| **GitHub (public)** | `docs/` web app, `demo/replay.html` (synthetic only), source code |
+| **Visitor browser** | Their own FIT/zip — processed locally, not stored by us |
+| **Local machine (you)** | Real `.fit` files under `Dragonboat/`, real replays (gitignored) |
 
-Real session replays under `Dragonboat/**/replay.html` are **gitignored**. Git history was rewritten so no real route data is recoverable from the repo. Share real replays privately (email, Drive) if needed.
+Real session replays under `Dragonboat/**/replay.html` are **gitignored**. Never commit `data/` activity zips.
 
-## Quick start
+## Quick start (Python CLI)
 
 ```bash
 pip install -r requirements.txt
@@ -80,19 +99,19 @@ python3 generate_replay.py --demo [options]
 
 ```
 garmin-analysis/
+├── docs/                       # GitHub Pages web app (upload → replay → share)
+│   ├── index.html
+│   ├── app.js / fit-loader.js / replay-engine.js / poster.js
+│   └── replay-standalone.js    # embedded into downloaded HTML
 ├── generate_replay.py          # CLI entry point
 ├── fit_data.py                 # Load FIT / demo points
 ├── html_builder.py             # Assemble self-contained HTML
-├── templates/                  # replay.html, .css, .js (edit UI here)
+├── templates/                  # CLI replay.html, .css, .js
 ├── demo/replay.html            # Public demo (synthetic data)
 ├── requirements.txt
 ├── README.md
-├── .gitignore                  # Excludes real .fit, CSVs, session replays
+├── .gitignore                  # Excludes real .fit, data/, session replays
 └── Dragonboat/                 # Your real sessions (local only)
-    └── 20260622/
-        ├── replay.html                # Gitignored
-        ├── *.fit                      # Gitignored
-        └── analysis_*                 # Gitignored
 ```
 
 ## Data notes

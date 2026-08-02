@@ -2,6 +2,7 @@
 *.fit
 analysis_*.csv
 analysis_*.tsv
+data/
 
 # Real session replays (use demo/replay.html for the public repo)
 Dragonboat/**/replay.html
@@ -9,6 +10,8 @@ Dragonboat/**/*_replay.html
 
 # Generated static exports (may contain GPS/HR)
 *.png
+!docs/**/*.png
+
 
 # macOS
 .DS_Store

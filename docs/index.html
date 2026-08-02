@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dragon Boat Replay — Garmin FIT → map</title>
+  <meta name="description" content="Upload a Garmin .fit or activity .zip. Get an interactive map replay in your browser. GPS never leaves your device." />
+  <meta property="og:title" content="Dragon Boat Replay" />
+  <meta property="og:description" content="Turn Garmin FIT / zip exports into a shareable map + speed replay. Private — all processing in your browser." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="app.css" />
+  <link rel="stylesheet" href="replay.css" />
+</head>
+<body>
+  <!-- Landing -->
+  <section id="landing" class="landing">
+    <div class="landing-inner">
+      <p class="eyebrow">Garmin · dragon boat / SUP</p>
+      <h1>Interactive map replay</h1>
+      <p class="lede">
+        Drop a Garmin <strong>.fit</strong> or activity <strong>.zip</strong>.
+        Watch the route on satellite + speed chart. Download HTML or a poster for social.
+      </p>
+      <p class="privacy">
+        <span class="lock">🔒</span>
+        Fully private: files stay in your browser. Nothing is uploaded to a server.
+      </p>
+
+      <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Upload Garmin FIT or zip">
+        <div class="dropzone-icon">📁</div>
+        <p><strong>Drop file here</strong> or click to browse</p>
+        <p class="hint">.fit · .zip (Garmin Connect export)</p>
+        <input id="file-input" type="file" accept=".fit,.zip,application/zip,application/octet-stream" hidden />
+      </div>
+
+      <p id="status" class="status" hidden></p>
+
+      <div class="actions-row">
+        <button type="button" id="demo-btn" class="btn btn-ghost">Try synthetic demo</button>
+      </div>
+
+      <footer class="landing-foot">
+        <a href="https://github.com/jchiu1303/garmin-analysis">GitHub</a>
+        · open source · GitHub Pages
+      </footer>
+    </div>
+  </section>
+
+  <!-- Player -->
+  <section id="player" class="player" hidden>
+    <header class="app-header">
+      <div class="app-header-left">
+        <button type="button" id="back-btn" class="btn btn-ghost btn-sm">← New file</button>
+        <div>
+          <h1 id="session-title">Dragon Boat Replay</h1>
+          <span id="session-meta" class="session-meta"></span>
+        </div>
+      </div>
+      <div class="share-bar">
+        <button type="button" id="dl-html-btn" class="btn btn-primary btn-sm">Download HTML</button>
+        <button type="button" id="poster-btn" class="btn btn-secondary btn-sm">Share poster</button>
+        <button type="button" id="caption-btn" class="btn btn-ghost btn-sm">Copy caption</button>
+      </div>
+    </header>
+
+    <div class="map-wrap">
+      <div id="map"></div>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-header">
+        <h2>Speed over time</h2>
+        <span>Space play/pause · ←→ step · 1–5 speed · click chart to jump</span>
+      </div>
+      <div class="chart-stage">
+        <canvas id="speed-chart"></canvas>
+        <div id="chart-cursor">
+          <div class="chart-cursor-line"></div>
+          <div class="chart-cursor-dot"></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="stats">
+        <div class="stat"><div class="label">Time</div><div class="value" id="v-time">--:--:--</div></div>
+        <div class="stat"><div class="label">Speed</div><div class="value" id="v-speed">0.0</div><div class="unit">km/h</div></div>
+        <div class="stat"><div class="label">Stroke Rate</div><div class="value" id="v-cadence">—</div><div class="unit">spm</div></div>
+        <div class="stat"><div class="label">Distance</div><div class="value" id="v-dist">0.00</div><div class="unit">km</div></div>
+      </div>
+      <div class="controls">
+        <button id="play-btn" title="Play / Pause">▶</button>
+        <label id="lbl-start">--:--</label>
+        <input type="range" id="slider" min="0" max="0" value="0" step="1" />
+        <label id="lbl-end">--:--</label>
+      </div>
+      <div class="speed-row">
+        <span class="label">Speed</span>
+        <div class="speed-btns" id="speed-btns">
+          <button type="button" data-rate="0.25">0.25×</button>
+          <button type="button" data-rate="0.5">0.5×</button>
+          <button type="button" data-rate="1" class="active">1×</button>
+          <button type="button" data-rate="2">2×</button>
+          <button type="button" data-rate="4">4×</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Poster modal -->
+  <div id="poster-modal" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>Share poster</h2>
+        <button type="button" id="poster-close" class="btn btn-ghost btn-sm">Close</button>
+      </div>
+      <p class="modal-hint">Save the image for Instagram / Stories / X. Caption is copied when you download.</p>
+      <canvas id="poster-canvas" width="1080" height="1350"></canvas>
+      <div class="modal-actions">
+        <button type="button" id="poster-dl" class="btn btn-primary">Download PNG + copy caption</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
