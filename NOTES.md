@@ -36,3 +36,14 @@ Handoff for new sessions.
 ```
 Read paddle-replay/NOTES.md (Paddle Replay). Continue Pages app in docs/; enable Pages if not live.
 ```
+
+## Rename GitHub repo (one-time — needs you)
+1. https://github.com/jchiu1303/garmin-analysis/settings
+2. **Repository name** → `paddle-replay` → Rename
+3. Then locally:
+   ```bash
+   cd ~/Projects/GrokBuild/paddle-replay
+   git remote set-url origin https://github.com/jchiu1303/paddle-replay.git
+   ```
+4. Pages URL becomes: https://jchiu1303.github.io/paddle-replay/
+   (Settings → Pages may need re-save: main / docs)
