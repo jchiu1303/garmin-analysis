@@ -15,6 +15,7 @@ const fileInput = document.getElementById("file-input");
 const statusEl = document.getElementById("status");
 const toastEl = document.getElementById("toast");
 const demoBtn = document.getElementById("demo-btn");
+const demoBtnInline = document.getElementById("demo-btn-inline");
 const backBtn = document.getElementById("back-btn");
 const dlHtmlBtn = document.getElementById("dl-html-btn");
 const posterBtn = document.getElementById("poster-btn");
@@ -235,7 +236,7 @@ landing.addEventListener("drop", (e) => {
   if (f) handleFile(f);
 });
 
-demoBtn.addEventListener("click", async () => {
+async function startDemo() {
   if (state.busy) return;
   state.busy = true;
   setStatus("Loading demo…", "busy");
@@ -259,7 +260,10 @@ demoBtn.addEventListener("click", async () => {
   } finally {
     state.busy = false;
   }
-});
+}
+
+demoBtn.addEventListener("click", startDemo);
+if (demoBtnInline) demoBtnInline.addEventListener("click", startDemo);
 
 backBtn.addEventListener("click", () => {
   showLanding();

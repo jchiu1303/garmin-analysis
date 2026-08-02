@@ -3,12 +3,57 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dragon Boat Replay — Garmin FIT → map</title>
-  <meta name="description" content="Upload a Garmin .fit or activity .zip. Get an interactive map replay in your browser. GPS never leaves your device." />
-  <meta property="og:title" content="Dragon Boat Replay" />
-  <meta property="og:description" content="Turn Garmin FIT / zip exports into a shareable map + speed replay. Private — all processing in your browser." />
+  <title>Dragon Boat GPS Replay — Free Garmin FIT Map Tracker for Paddling &amp; SUP</title>
+  <meta name="description" content="Free browser tool to turn Garmin FIT and activity ZIP files into an interactive satellite map replay with speed and stroke rate. Built for dragon boat, SUP, and paddling. Private — GPS never leaves your device. Download shareable HTML or a social poster." />
+  <meta name="keywords" content="dragon boat, Garmin FIT, GPS replay, paddling map, SUP tracker, activity map, stroke rate, FIT file viewer, private GPS, map replay, training analysis, Hong Kong dragon boat" />
+  <meta name="author" content="jchiu1303" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://jchiu1303.github.io/garmin-analysis/" />
+
+  <meta property="og:title" content="Dragon Boat GPS Replay — Free Garmin FIT Map Tracker" />
+  <meta property="og:description" content="Upload a Garmin FIT or ZIP and get an interactive map + speed replay in your browser. Private client-side processing for dragon boat and paddling athletes." />
   <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://jchiu1303.github.io/garmin-analysis/" />
+  <meta property="og:site_name" content="Dragon Boat Replay" />
+  <meta property="og:locale" content="en_US" />
+
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Dragon Boat GPS Replay — Free Garmin FIT Map Tracker" />
+  <meta name="twitter:description" content="Interactive satellite map replay from Garmin FIT files. Private, free, in-browser for dragon boat and SUP." />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Dragon Boat Replay",
+    "url": "https://jchiu1303.github.io/garmin-analysis/",
+    "description": "Free browser app that converts Garmin FIT and activity ZIP exports into interactive satellite map replays with speed charts for dragon boat, SUP, and paddling.",
+    "applicationCategory": "SportsApplication",
+    "operatingSystem": "Any",
+    "browserRequirements": "Requires JavaScript and a modern browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "featureList": [
+      "Garmin FIT file upload",
+      "Activity ZIP support",
+      "Satellite map route replay",
+      "Speed over time chart",
+      "Stroke rate display",
+      "Download self-contained HTML",
+      "Social share poster export",
+      "Client-side privacy — no server upload"
+    ],
+    "author": {
+      "@type": "Person",
+      "name": "jchiu1303",
+      "url": "https://github.com/jchiu1303"
+    }
+  }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700&display=swap" rel="stylesheet" />
@@ -19,30 +64,49 @@
 <body>
   <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
 
-  <!-- Landing — Cayman-style project page -->
   <section id="landing" class="landing">
     <header class="page-header">
       <h1 class="project-name">Dragon Boat Replay</h1>
-      <h2 class="project-tagline">
-        Garmin FIT → interactive map &amp; speed chart. Private — runs in your browser.
-      </h2>
+      <p class="project-tagline">
+        Free Garmin FIT map tracker for dragon boat, SUP, and paddling — interactive satellite replay, speed chart, and shareable exports. Fully private in your browser.
+      </p>
       <a href="https://github.com/jchiu1303/garmin-analysis" class="btn">View on GitHub</a>
-      <a href="https://github.com/jchiu1303/garmin-analysis/zipball/main" class="btn">Download .zip</a>
+      <a href="#how-it-works" class="btn">How it works</a>
       <button type="button" id="demo-btn" class="btn">Try demo</button>
     </header>
 
     <main class="main-content">
-      <h2>Upload your activity</h2>
+      <nav class="toc" aria-label="On this page">
+        <strong>On this page</strong>
+        <ul>
+          <li><a href="#upload">Upload activity</a></li>
+          <li><a href="#what-is">What is this tool?</a></li>
+          <li><a href="#how-it-works">How it works</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#export-garmin">Export from Garmin Connect</a></li>
+          <li><a href="#who-for">Who it is for</a></li>
+          <li><a href="#privacy">Privacy</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="#about">About &amp; contact</a></li>
+        </ul>
+      </nav>
+
+      <h2 id="upload">Upload your paddling activity</h2>
       <p>
-        Drop a Garmin <strong>.fit</strong> or activity <strong>.zip</strong> from Garmin Connect.
-        Watch the route on satellite imagery with a synced speed chart, then download a
-        self-contained HTML replay or a social poster.
+        Drop a Garmin <strong>.fit</strong> file or an activity <strong>.zip</strong> exported from
+        Garmin Connect. In seconds you get an interactive <strong>dragon boat GPS replay</strong> on
+        satellite imagery: play the route, scrub the timeline, watch speed and stroke rate update live,
+        then download a self-contained HTML file or a poster image for social media.
+      </p>
+      <p>
+        No account, no install, no app store. Works on laptop and phone browsers. Ideal for reviewing
+        training sessions, race pieces, and team debriefs after dragon boat or stand-up paddleboard outings.
       </p>
 
       <label id="dropzone" class="dropzone" for="file-input">
         <div class="dropzone-icon" aria-hidden="true">📁</div>
         <p class="dropzone-title"><strong>Drop file here</strong> or click to browse</p>
-        <p class="dropzone-hint">Accepts <code>.fit</code> and <code>.zip</code></p>
+        <p class="dropzone-hint">Accepts <code>.fit</code> and <code>.zip</code> (Garmin activity export)</p>
       </label>
       <input
         id="file-input"
@@ -50,51 +114,217 @@
         type="file"
         accept=".fit,.zip,application/zip,application/octet-stream,*/*"
       />
-
       <p id="status" class="status" hidden></p>
+      <p class="upload-alt">
+        Prefer a quick look first?
+        <button type="button" id="demo-btn-inline" class="linkish">Try the synthetic harbour demo</button>
+        — no file required.
+      </p>
 
-      <h2>Privacy</h2>
-      <blockquote>
-        <p>
-          Fully private: your GPS stays on your device. Nothing is uploaded to a server —
-          parsing happens entirely in the browser.
-        </p>
-      </blockquote>
+      <h2 id="what-is">What is Dragon Boat Replay?</h2>
+      <p>
+        <strong>Dragon Boat Replay</strong> is a free, open-source <strong>Garmin FIT map viewer</strong>
+        focused on water sports. Garmin watches and bike computers record activities as FIT files. Those
+        files are great for training history, but hard to share as a living map. This site turns a FIT
+        (or the ZIP you download from Garmin Connect) into a browser-based <strong>GPS track replay</strong>
+        with:
+      </p>
+      <ul>
+        <li>Satellite basemap of your full route and animated boat marker</li>
+        <li>Speed-over-time chart synced to the map</li>
+        <li>Stroke rate (cadence) and distance readouts where the FIT includes them</li>
+        <li>One-click export of a portable HTML replay and a social “poster” image</li>
+      </ul>
+      <p>
+        Unlike many cloud training platforms, processing stays on your device. That matters when you care
+        about <strong>GPS privacy</strong> for home water, training venues, or personal routes.
+      </p>
 
-      <h2>Features</h2>
+      <h2 id="how-it-works">How it works</h2>
+      <ol class="steps">
+        <li>
+          <strong>Export</strong> your activity from Garmin Connect as original FIT, or download the
+          activity package ZIP that contains the FIT.
+        </li>
+        <li>
+          <strong>Upload</strong> on this page (or try the demo). The browser parses FIT records with a
+          client-side library — no upload to our servers.
+        </li>
+        <li>
+          <strong>Replay</strong> on the map: play/pause, change speed, scrub the slider, click the chart,
+          or use keyboard shortcuts.
+        </li>
+        <li>
+          <strong>Share</strong> by downloading HTML for email/Drive, or a poster PNG with a ready caption
+          for Instagram, Stories, or group chats.
+        </li>
+      </ol>
+      <p>
+        Technical note: GPS coordinates in FIT are converted from semicircles to degrees; timestamps are
+        shown in Hong Kong Time (HKT, UTC+8) for local paddling clubs. Sampling is whatever your device
+        recorded (often irregular, not fixed 1 Hz).
+      </p>
+
+      <h2 id="features">Features for paddling athletes and coaches</h2>
       <table>
         <thead>
           <tr>
             <th>Feature</th>
-            <th>Description</th>
+            <th>Why it helps</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>Satellite map</td>
-            <td>Esri imagery with full route + live boat marker</td>
+            <td>Satellite map replay</td>
+            <td>See lines relative to coastline, harbour channels, and training loops</td>
           </tr>
           <tr>
             <td>Speed chart</td>
-            <td>Click to jump; cursor synced with map</td>
+            <td>Spot pushes, rests, and race pieces; click to jump the map to that moment</td>
           </tr>
           <tr>
-            <td>Playback</td>
-            <td>0.25×–4× · keyboard shortcuts · scrub slider</td>
+            <td>Stroke rate</td>
+            <td>When cadence is in the FIT (common on paddling/SUP profiles), review SPM alongside speed</td>
           </tr>
           <tr>
-            <td>Share</td>
-            <td>Download HTML · poster PNG · copy caption for social</td>
+            <td>Playback speeds 0.25×–4×</td>
+            <td>Skim a long session or slow down technical sections</td>
+          </tr>
+          <tr>
+            <td>HTML download</td>
+            <td>Send one file; recipients only need a browser and map tiles</td>
+          </tr>
+          <tr>
+            <td>Share poster</td>
+            <td>Route image + stats for social posts without exposing full interactive GPS if you prefer</td>
+          </tr>
+          <tr>
+            <td>Client-side only</td>
+            <td>No account; suitable for privacy-sensitive personal training data</td>
           </tr>
         </tbody>
       </table>
 
-      <h2>Keyboard (in replay)</h2>
+      <h3>Keyboard shortcuts (during replay)</h3>
       <ul>
-        <li><kbd>Space</kbd> play / pause</li>
-        <li><kbd>←</kbd> <kbd>→</kbd> step one GPS point</li>
-        <li><kbd>1</kbd>–<kbd>5</kbd> playback speed</li>
+        <li><kbd>Space</kbd> — play / pause (resumes from the same place you stopped)</li>
+        <li><kbd>←</kbd> <kbd>→</kbd> — step one GPS sample left or right</li>
+        <li><kbd>1</kbd>–<kbd>5</kbd> — playback rate 0.25×, 0.5×, 1×, 2×, 4×</li>
       </ul>
+
+      <h2 id="export-garmin">How to export a FIT file from Garmin Connect</h2>
+      <p>
+        To use this free <strong>FIT file map viewer</strong>, you need the original activity data from Garmin:
+      </p>
+      <ol>
+        <li>Sign in to <a href="https://connect.garmin.com/" rel="noopener noreferrer">Garmin Connect</a> on the web.</li>
+        <li>Open the activity you want (dragon boat, SUP, paddling, or similar).</li>
+        <li>Use the gear / export menu and choose <strong>Export Original</strong> (FIT) or download the activity export ZIP.</li>
+        <li>Return here and drop the <code>.fit</code> or <code>.zip</code> on the upload box above.</li>
+      </ol>
+      <p>
+        If the file has no GPS positions (indoor or sensor-only activity), the tool will explain that no map
+        points were found. Outdoor water sessions with GPS enabled work best.
+      </p>
+
+      <h2 id="who-for">Who this is for</h2>
+      <p>
+        Built first for <strong>dragon boat</strong> crews and recreational paddlers who record sessions on
+        Garmin devices, including athletes in Hong Kong and other harbour / open-water clubs. It also works
+        well for:
+      </p>
+      <ul>
+        <li>Stand-up paddleboard (SUP) and outrigger training reviews</li>
+        <li>Coaches sharing a route replay in a team chat without requiring Garmin accounts for everyone</li>
+        <li>Athletes who want a simple “what did my piece look like?” map without a full training SaaS</li>
+        <li>Anyone who needs a private, offline-friendly HTML copy of a track</li>
+      </ul>
+      <p>
+        The synthetic demo uses a fictional mid-harbour paddling loop so you can test the player without
+        uploading personal GPS data.
+      </p>
+
+      <h2 id="privacy">Privacy policy (summary)</h2>
+      <blockquote>
+        <p>
+          <strong>Your activity files are processed only in your browser.</strong> This static site does not
+          upload your FIT or ZIP to a server we control. GPS coordinates stay on your device unless you
+          choose to download and share the generated HTML or poster yourself.
+        </p>
+      </blockquote>
+      <p>
+        Map tiles and open-source libraries load from public CDNs (for example Leaflet and imagery providers)
+        as needed to draw the map. We do not run user accounts, analytics beacons for ad profiling, or a
+        backend database of routes on this Pages deployment. If third-party ads (such as Google AdSense) are
+        added in the future, this page will be updated to disclose any additional cookies or data practices.
+      </p>
+      <p>
+        Open-source code is published on
+        <a href="https://github.com/jchiu1303/garmin-analysis">GitHub</a> so you can inspect exactly how
+        parsing and replay work.
+      </p>
+
+      <h2 id="faq">Frequently asked questions</h2>
+      <div class="faq">
+        <h3>Is Dragon Boat Replay free?</h3>
+        <p>
+          Yes. The web app is free to use. The project is open source under the repository terms on GitHub.
+        </p>
+
+        <h3>Does my GPS get uploaded to the internet?</h3>
+        <p>
+          Not to our servers. Parsing runs locally in JavaScript. You only leave the page’s origin if you
+          share a file you downloaded or if the map requests public tile images.
+        </p>
+
+        <h3>What file types are supported?</h3>
+        <p>
+          Garmin <code>.fit</code> activity files and <code>.zip</code> archives that contain a FIT (typical
+          Garmin Connect export). GPX/TCX are not the primary path today.
+        </p>
+
+        <h3>Can I use this for sports other than dragon boat?</h3>
+        <p>
+          Yes. Any outdoor FIT with latitude/longitude records can replay. Naming and defaults lean paddling,
+          but cycling or running tracks will still map if GPS is present.
+        </p>
+
+        <h3>Why is stroke rate missing sometimes?</h3>
+        <p>
+          Stroke rate comes from cadence fields in the FIT. If your device or activity profile did not record
+          cadence, the replay still shows map, speed, and distance.
+        </p>
+
+        <h3>Will this work with Google AdSense later?</h3>
+        <p>
+          The site is structured as a real content page (guides, FAQ, privacy) so it can support responsible
+          ad placement if enabled. Ads are not required to use the tool. Any future ads will be secondary to
+          the free tracker and documented in the privacy section.
+        </p>
+      </div>
+
+      <h2 id="about">About &amp; contact</h2>
+      <p>
+        Dragon Boat Replay is part of the open-source
+        <a href="https://github.com/jchiu1303/garmin-analysis">garmin-analysis</a> project maintained by
+        <a href="https://github.com/jchiu1303">jchiu1303</a>. It started as a personal tool for reviewing
+        Garmin paddling sessions and grew into a shareable, privacy-first map player.
+      </p>
+      <p>
+        Feedback, bug reports, and feature ideas are welcome via
+        <a href="https://github.com/jchiu1303/garmin-analysis/issues">GitHub Issues</a>.
+        For privacy or content questions about this website, open an issue on that repository.
+      </p>
+      <p class="seo-closing">
+        Search terms people use for tools like this include: dragon boat GPS tracker, Garmin FIT viewer,
+        paddling route map, SUP activity replay, private FIT to map converter, and free training session map
+        player. If that is what you needed — upload above and hit play.
+      </p>
+
+      <!-- Reserved for future ad unit (e.g. Google AdSense) — content above must remain primary -->
+      <aside class="ad-slot" aria-label="Advertisement placeholder" hidden>
+        <!-- AdSense or other ad code can be inserted here when approved -->
+      </aside>
 
       <footer class="site-footer">
         <span class="site-footer-owner">
@@ -103,15 +333,15 @@
           <a href="https://github.com/jchiu1303">jchiu1303</a>.
         </span>
         <span class="site-footer-credits">
-          Styled after the
-          <a href="https://github.com/pages-themes/cayman">Cayman</a>
-          GitHub Pages theme · Open source
+          Free Garmin FIT map replay for dragon boat &amp; paddling ·
+          <a href="#privacy">Privacy</a> ·
+          <a href="https://github.com/pages-themes/cayman">Cayman-inspired</a> layout ·
+          Open source
         </span>
       </footer>
     </main>
   </section>
 
-  <!-- Player (dark map UI — separate from landing chrome) -->
   <section id="player" class="player" hidden>
     <header class="app-header">
       <div class="app-header-left">
