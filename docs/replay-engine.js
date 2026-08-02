@@ -23,11 +23,12 @@ export function createReplay(POINTS) {
     { color: "#475569", weight: 3, opacity: 0.35, smoothFactor: 0 }
   ).addTo(map);
 
+  // iconAnchor is the red-dot center so lat/lon sits on the route (badge floats above)
   const dotIcon = L.divIcon({
-    className: "",
+    className: "boat-div-icon",
     html: '<div class="boat-marker"><div class="speed-badge" id="map-speed">0.0 km/h</div><div class="dot-marker"></div></div>',
-    iconSize: [90, 48],
-    iconAnchor: [45, 30],
+    iconSize: [90, 40],
+    iconAnchor: [45, 32],
   });
   const dot = L.marker([POINTS[0].lat, POINTS[0].lon], {
     icon: dotIcon,
