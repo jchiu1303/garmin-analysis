@@ -3,23 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Paddle Replay — Free Garmin FIT Map Tracker for Paddling &amp; SUP</title>
-  <meta name="description" content="Free browser tool to turn Garmin FIT and activity ZIP files into an interactive satellite map replay with speed and stroke rate. Built for dragon boat, SUP, and paddling. Private — GPS never leaves your device. Download shareable HTML or a social poster." />
-  <meta name="keywords" content="dragon boat, Garmin FIT, GPS replay, paddling map, SUP tracker, activity map, stroke rate, FIT file viewer, private GPS, map replay, training analysis, Hong Kong dragon boat" />
+  <title>Paddle Replay — Free Garmin FIT Map Tracker for Paddling, SUP &amp; Kayak</title>
+  <meta name="description" content="Free browser tool to turn Garmin FIT and activity ZIP files into an interactive satellite map replay with speed, heart rate, and stroke rate. Built for paddling sports — SUP, kayak, canoe, outrigger, dragon boat, and more. Private — GPS never leaves your device." />
+  <meta name="keywords" content="paddling, Garmin FIT, GPS replay, paddling map, SUP tracker, kayak GPS, canoe training, outrigger, dragon boat, stroke rate, FIT file viewer, private GPS, map replay, water sports" />
   <meta name="author" content="jchiu1303" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://jchiu1303.github.io/garmin-analysis/" />
 
-  <meta property="og:title" content="Paddle Replay — Free Garmin FIT Map Tracker" />
-  <meta property="og:description" content="Upload a Garmin FIT or ZIP and get an interactive map + speed replay in your browser. Private client-side processing for dragon boat and paddling athletes." />
+  <meta property="og:title" content="Paddle Replay — Free Garmin FIT Map Tracker for Paddling" />
+  <meta property="og:description" content="Upload a Garmin FIT or ZIP and get an interactive map + speed replay in your browser. Private client-side processing for paddlers of all kinds." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://jchiu1303.github.io/garmin-analysis/" />
   <meta property="og:site_name" content="Paddle Replay" />
   <meta property="og:locale" content="en_US" />
 
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Paddle Replay — Free Garmin FIT Map Tracker" />
-  <meta name="twitter:description" content="Interactive satellite map replay from Garmin FIT files. Private, free, in-browser for dragon boat and SUP." />
+  <meta name="twitter:title" content="Paddle Replay — Free Garmin FIT Map Tracker for Paddling" />
+  <meta name="twitter:description" content="Interactive satellite map replay from Garmin FIT files. Private, free, in-browser for SUP, kayak, canoe, and all paddling sports." />
 
   <script type="application/ld+json">
   {
@@ -27,7 +27,7 @@
     "@type": "WebApplication",
     "name": "Paddle Replay",
     "url": "https://jchiu1303.github.io/garmin-analysis/",
-    "description": "Free browser app that converts Garmin FIT and activity ZIP exports into interactive satellite map replays with speed charts for dragon boat, SUP, and paddling.",
+    "description": "Free browser app that converts Garmin FIT and activity ZIP exports into interactive satellite map replays with speed charts for paddling sports including SUP, kayak, canoe, outrigger, and dragon boat.",
     "applicationCategory": "SportsApplication",
     "operatingSystem": "Any",
     "browserRequirements": "Requires JavaScript and a modern browser",
@@ -68,7 +68,7 @@
     <header class="page-header">
       <h1 class="project-name">Paddle Replay</h1>
       <p class="project-tagline">
-        Free Garmin FIT map tracker for dragon boat, SUP, and paddling — interactive satellite replay, speed chart, and shareable exports. Fully private in your browser.
+        Free Garmin FIT map tracker for paddling sports — SUP, kayak, canoe, outrigger, dragon boat, and more. Interactive satellite replay, speed chart, and shareable exports. Fully private in your browser.
       </p>
       <a href="https://github.com/jchiu1303/garmin-analysis" class="btn">View on GitHub</a>
       <a href="#how-it-works" class="btn">How it works</a>
@@ -100,7 +100,7 @@
       </p>
       <p>
         No account, no install, no app store. Works on laptop and phone browsers. Ideal for reviewing
-        training sessions, race pieces, and team debriefs after dragon boat or stand-up paddleboard outings.
+        training sessions, intervals, and team debriefs after any paddling outing on the water.
       </p>
 
       <label id="dropzone" class="dropzone" for="file-input">
@@ -124,16 +124,16 @@
       <h2 id="what-is">What is Paddle Replay?</h2>
       <p>
         <strong>Paddle Replay</strong> is a free, open-source <strong>Garmin FIT map viewer</strong>
-        focused on water sports. Garmin watches and bike computers record activities as FIT files. Those
-        files are great for training history, but hard to share as a living map. This site turns a FIT
+        for paddling and water sports. Garmin watches and bike computers record activities as FIT files.
+        Those files are great for training history, but hard to share as a living map. This site turns a FIT
         (or the ZIP you download from Garmin Connect) into a browser-based <strong>GPS track replay</strong>
         with:
       </p>
       <ul>
-        <li>Satellite basemap of your full route and animated boat marker</li>
+        <li>Satellite basemap of your full route and animated craft marker</li>
         <li>Speed-over-time chart synced to the map</li>
-        <li>Stroke rate (cadence) and distance readouts where the FIT includes them</li>
-        <li>One-click export of a portable HTML replay and a social “poster” image</li>
+        <li>Heart rate and stroke rate (cadence) where the FIT includes them</li>
+        <li>One-click export of a portable HTML replay, social poster, or story timelapse</li>
       </ul>
       <p>
         Unlike many cloud training platforms, processing stays on your device. That matters when you care
@@ -161,11 +161,11 @@
       </ol>
       <p>
         Technical note: GPS coordinates in FIT are converted from semicircles to degrees; timestamps are
-        shown in Hong Kong Time (HKT, UTC+8) for local paddling clubs. Sampling is whatever your device
-        recorded (often irregular, not fixed 1 Hz).
+        shown in Hong Kong Time (HKT, UTC+8). Sampling is whatever your device recorded (often irregular,
+        not fixed 1 Hz).
       </p>
 
-      <h2 id="features">Features for paddling athletes and coaches</h2>
+      <h2 id="features">Features for paddlers and coaches</h2>
       <table>
         <thead>
           <tr>
@@ -176,15 +176,15 @@
         <tbody>
           <tr>
             <td>Satellite map replay</td>
-            <td>See lines relative to coastline, harbour channels, and training loops</td>
+            <td>See lines relative to coastline, rivers, harbours, and training loops</td>
           </tr>
           <tr>
             <td>Speed chart</td>
             <td>Spot pushes, rests, and race pieces; click to jump the map to that moment</td>
           </tr>
           <tr>
-            <td>Stroke rate</td>
-            <td>When cadence is in the FIT (common on paddling/SUP profiles), review SPM alongside speed</td>
+            <td>Heart rate &amp; stroke rate</td>
+            <td>Toggle HR (bpm) and cadence/SPM overlays when your FIT recorded them</td>
           </tr>
           <tr>
             <td>Playback speeds 0.25×–4×</td>
@@ -218,30 +218,31 @@
       </p>
       <ol>
         <li>Sign in to <a href="https://connect.garmin.com/" rel="noopener noreferrer">Garmin Connect</a> on the web.</li>
-        <li>Open the activity you want (dragon boat, SUP, paddling, or similar).</li>
+        <li>Open the activity you want (SUP, kayak, canoe, paddling profile, or any outdoor GPS session).</li>
         <li>Use the gear / export menu and choose <strong>Export Original</strong> (FIT) or download the activity export ZIP.</li>
         <li>Return here and drop the <code>.fit</code> or <code>.zip</code> on the upload box above.</li>
       </ol>
       <p>
         If the file has no GPS positions (indoor or sensor-only activity), the tool will explain that no map
-        points were found. Outdoor water sessions with GPS enabled work best.
+        points were found. Outdoor sessions with GPS enabled work best.
       </p>
 
       <h2 id="who-for">Who this is for</h2>
       <p>
-        Built first for <strong>dragon boat</strong> crews and recreational paddlers who record sessions on
-        Garmin devices, including athletes in Hong Kong and other harbour / open-water clubs. It also works
-        well for:
+        Built for <strong>paddlers</strong> who record sessions on Garmin devices — solo or in a crew —
+        and want a simple, private way to replay the track. Works well for:
       </p>
       <ul>
-        <li>Stand-up paddleboard (SUP) and outrigger training reviews</li>
-        <li>Coaches sharing a route replay in a team chat without requiring Garmin accounts for everyone</li>
-        <li>Athletes who want a simple “what did my piece look like?” map without a full training SaaS</li>
-        <li>Anyone who needs a private, offline-friendly HTML copy of a track</li>
+        <li>Stand-up paddleboard (SUP), race SUP, and touring</li>
+        <li>Kayak, sea kayak, and canoe</li>
+        <li>Outrigger canoe (OC1 / OC6) and similar crew boats</li>
+        <li>Dragon boat and other team paddle sports</li>
+        <li>Coaches sharing a route in chat without requiring Garmin accounts for everyone</li>
+        <li>Anyone who wants a private, offline-friendly HTML copy of a track</li>
       </ul>
       <p>
         The synthetic demo uses a fictional mid-harbour paddling loop so you can test the player without
-        uploading personal GPS data.
+        uploading personal GPS data. Any outdoor FIT with latitude/longitude will map.
       </p>
 
       <h2 id="privacy">Privacy policy (summary)</h2>
@@ -283,10 +284,10 @@
           Garmin Connect export). GPX/TCX are not the primary path today.
         </p>
 
-        <h3>Can I use this for sports other than dragon boat?</h3>
+        <h3>Which paddling sports work?</h3>
         <p>
-          Yes. Any outdoor FIT with latitude/longitude records can replay. Naming and defaults lean paddling,
-          but cycling or running tracks will still map if GPS is present.
+          Any outdoor FIT with GPS works — SUP, kayak, canoe, outrigger, dragon boat, and similar water
+          sports. Cycling or running tracks will also map if they include latitude/longitude.
         </p>
 
         <h3>Why is stroke rate missing sometimes?</h3>
@@ -311,8 +312,8 @@
         For privacy or content questions about this website, open an issue on that repository.
       </p>
       <p class="seo-closing">
-        Search terms people use for tools like this include: dragon boat GPS tracker, Garmin FIT viewer,
-        paddling route map, SUP activity replay, private FIT to map converter, and free training session map
+        Search terms people use for tools like this include: paddling GPS tracker, Garmin FIT viewer,
+        SUP activity map, kayak route replay, private FIT to map converter, and free training session map
         player. If that is what you needed — upload above and hit play.
       </p>
 
@@ -328,7 +329,7 @@
           <a href="https://github.com/jchiu1303">jchiu1303</a>.
         </span>
         <span class="site-footer-credits">
-          Free Garmin FIT map replay for paddling &amp; dragon boat ·
+          Free Garmin FIT map replay for paddling sports ·
           <a href="#privacy">Privacy</a> ·
           <a href="https://github.com/pages-themes/cayman">Cayman-inspired</a> layout ·
           Open source

@@ -1,6 +1,6 @@
 # Paddle Replay
 
-Interactive map replay for Garmin FIT activity files — dragon boat, SUP, and paddling.
+Interactive map replay for Garmin FIT activity files — SUP, kayak, canoe, outrigger, dragon boat, and paddling in general.
 
 **Product name:** Paddle Replay · **Code folder / GitHub repo:** `garmin-analysis` (rename on GitHub if you want the URL to match)
 
