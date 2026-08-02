@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://jchiu1303.github.io/garmin-analysis/sitemap.xml
+Sitemap: https://jchiu1303.github.io/paddle-replay/sitemap.xml

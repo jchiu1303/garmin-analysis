@@ -2,7 +2,7 @@
 
 ## What is wrong right now
 
-1. **Site unpublished** → `https://jchiu1303.github.io/garmin-analysis/` returns **404**
+1. **Site unpublished** → `https://jchiu1303.github.io/paddle-replay/` returns **404**
 2. Earlier **custom domain** `paddlereplay.com` was set without working DNS → browsers may still try that dead name
 
 The app code on `main` is fine (`docs/` folder). Pages just needs to be turned back on **without** a custom domain.
@@ -13,7 +13,7 @@ The app code on `main` is fine (`docs/` folder). Pages just needs to be turned b
 
 ### A. Open Pages settings
 
-https://github.com/jchiu1303/garmin-analysis/settings/pages
+https://github.com/jchiu1303/paddle-replay/settings/pages
 
 ### B. Clear custom domain (critical)
 
@@ -36,11 +36,11 @@ Click **Save**.
 
 Wait 1–3 minutes. The page should say something like:
 
-> Your site is live at **https://jchiu1303.github.io/garmin-analysis/**
+> Your site is live at **https://jchiu1303.github.io/paddle-replay/**
 
 ### D. Open in a private window
 
-**https://jchiu1303.github.io/garmin-analysis/**
+**https://jchiu1303.github.io/paddle-replay/**
 
 Use **File → New Private Window** (or Incognito) so old redirects to paddlereplay.com are not reused.
 
@@ -66,7 +66,7 @@ Or try another browser / phone on cellular data.
 1. Confirm `docs/index.html` exists on main (it does in the repo)
 2. Settings → Pages → Source is **main** / **docs** (not “None”)
 3. Open the **Actions** tab only if you see failed workflows; branch deploy does not need Actions
-4. Try: https://jchiu1303.github.io/garmin-analysis/index.html
+4. Try: https://jchiu1303.github.io/paddle-replay/index.html
 
 ---
 
@@ -80,4 +80,4 @@ Or try another browser / phone on cellular data.
 
 ## After it works
 
-Bookmark: https://jchiu1303.github.io/garmin-analysis/
+Bookmark: https://jchiu1303.github.io/paddle-replay/

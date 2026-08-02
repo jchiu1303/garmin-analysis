@@ -2,10 +2,10 @@
 
 Interactive map replay for Garmin FIT activity files — SUP, kayak, canoe, outrigger, dragon boat, and paddling in general.
 
-**Product name:** Paddle Replay · **Code folder / GitHub repo:** `garmin-analysis` (rename on GitHub if you want the URL to match)
+**Repo / folder:** `paddle-replay` · **Product:** Paddle Replay
 
-**Repo:** https://github.com/jchiu1303/garmin-analysis (public)  
-**Web app (GitHub Pages):** https://jchiu1303.github.io/garmin-analysis/  
+**Repo:** https://github.com/jchiu1303/paddle-replay (public)  
+**Web app (GitHub Pages):** https://jchiu1303.github.io/paddle-replay/  
 **Second brain:** [notes/second-brain-garmin-analysis.md](notes/second-brain-garmin-analysis.md)
 
 ## Web app (browser — no install)
@@ -23,7 +23,7 @@ Static app in [`docs/`](docs/) — upload a Garmin `.fit` or activity `.zip`, pl
 1. Repo **Settings → Pages**
 2. Source: **Deploy from a branch**
 3. Branch: `main` · folder: **`/docs`**
-4. Save → site at `https://jchiu1303.github.io/garmin-analysis/`
+4. Save → site at `https://jchiu1303.github.io/paddle-replay/`
 
 ## Privacy model
 
@@ -100,7 +100,7 @@ python3 generate_replay.py --demo [options]
 ## Project layout
 
 ```
-garmin-analysis/
+paddle-replay/
 ├── docs/                       # GitHub Pages web app (upload → replay → share)
 │   ├── index.html
 │   ├── app.js / fit-loader.js / replay-engine.js / poster.js

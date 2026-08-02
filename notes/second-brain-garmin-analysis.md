@@ -1,9 +1,9 @@
-# Paddle Replay (garmin-analysis) — Second Brain
+# Paddle Replay  — Second Brain
 
 **Tags:** #garmin #dragonboat #fit #gps #side-project #data-viz  
 **Status:** Active  
 **Last updated:** 2026-06-25  
-**Repo:** https://github.com/jchiu1303/garmin-analysis (public)
+**Repo:** https://github.com/jchiu1303/paddle-replay (public)
 
 ---
 
@@ -37,7 +37,7 @@ Turn Garmin FIT files (recorded as SUP/paddling) into a **self-contained interac
 ## Project paths
 
 ```
-~/Projects/GrokBuild/garmin-analysis/
+~/Projects/GrokBuild/paddle-replay/
 ├── generate_replay.py     # Source of truth — edit features here, regenerate HTML
 ├── demo/replay.html       # PUBLIC — synthetic route (committed)
 ├── Dragonboat/20260622/
@@ -56,7 +56,7 @@ Turn Garmin FIT files (recorded as SUP/paddling) into a **self-contained interac
 ## Commands cheat sheet
 
 ```bash
-cd ~/Projects/GrokBuild/garmin-analysis
+cd ~/Projects/GrokBuild/paddle-replay
 pip install -r requirements.txt
 
 # Real session (local, gitignored output)

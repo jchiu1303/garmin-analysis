@@ -1,14 +1,14 @@
-# NOTES — Paddle Replay (garmin-analysis)
+# NOTES — Paddle Replay 
 
 Handoff for new sessions.
 
 ## Now (2026-08-02)
-- Product name: **Paddle Replay** (repo folder still `garmin-analysis` unless renamed on GitHub)
+- Product name: **Paddle Replay** (repo folder still `paddle-replay` unless renamed on GitHub)
 - FIT → interactive paddling replay HTML — **stable** (Python CLI)
 - **Web app** in `docs/` — browser upload FIT/zip → replay → download HTML + poster/story video
 - Landing styled like GitHub Pages **Cayman** theme (static CSS, still `.nojekyll` SPA)
 - Local preview: `cd docs && python3 -m http.server 8877` → http://127.0.0.1:8877/
-- Live: https://jchiu1303.github.io/garmin-analysis/
+- Live: https://jchiu1303.github.io/paddle-replay/
 - Privacy: client-side only; FIT/JSZip **vendored** under `docs/vendor/`
 - Real sessions under `Dragonboat/` (local); inbox zips in `data/` (gitignored)
 
@@ -34,5 +34,5 @@ Handoff for new sessions.
 
 ## New session prompt
 ```
-Read garmin-analysis/NOTES.md (Paddle Replay). Continue Pages app in docs/; enable Pages if not live.
+Read paddle-replay/NOTES.md (Paddle Replay). Continue Pages app in docs/; enable Pages if not live.
 ```
