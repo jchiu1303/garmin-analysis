@@ -348,7 +348,9 @@ export async function drawPoster(canvas, points, title, dateLabel, appUrl) {
 
 /**
  * 9:16 story timelapse (1080×1920) with satellite map + route animation.
- * Returns { blob, mime, ext }.
+ * Prefers H.264 MP4 (QuickTime / Instagram) via WebCodecs + mp4-muxer;
+ * falls back to MediaRecorder (may be WebM on some browsers).
+ * Returns { blob, mime, ext, meta }.
  */
 export async function recordStoryTimelapse(points, title, dateLabel, appUrl, onProgress) {
   const W = 1080;
@@ -356,7 +358,7 @@ export async function recordStoryTimelapse(points, title, dateLabel, appUrl, onP
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d", { alpha: false });
   const meta = sessionMeta(points, dateLabel);
 
   const mapX = 48;
@@ -368,7 +370,7 @@ export async function recordStoryTimelapse(points, title, dateLabel, appUrl, onP
   const bg = document.createElement("canvas");
   bg.width = W;
   bg.height = H;
-  const bgCtx = bg.getContext("2d");
+  const bgCtx = bg.getContext("2d", { alpha: false });
   drawChrome(bgCtx, W, H, title, meta, points, appUrl, { story: true });
   bgCtx.fillStyle = "rgba(0,0,0,0.35)";
   roundRect(bgCtx, mapX + 4, mapY + 6, mapW, mapH, 24);
@@ -394,8 +396,57 @@ export async function recordStoryTimelapse(points, title, dateLabel, appUrl, onP
     ? basemap.toXY
     : projectFallback(points, mapX, mapY, mapW, mapH);
 
+  const fps = 30;
+  const animSec = 7;
+  const holdSec = 1;
+  const totalFrames = Math.round((animSec + holdSec) * fps);
+  const animFrames = Math.round(animSec * fps);
+
+  function paintFrame(frameIndex) {
+    let progress = 1;
+    if (frameIndex < animFrames) {
+      const u = frameIndex / Math.max(animFrames - 1, 1);
+      progress = u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2;
+    }
+    ctx.drawImage(bg, 0, 0);
+    ctx.save();
+    roundRectPath(ctx, mapX, mapY, mapW, mapH, 24);
+    ctx.clip();
+    drawRouteOnMap(ctx, points, toXY, progress);
+    ctx.restore();
+
+    const barY = H - 140;
+    ctx.fillStyle = "rgba(255,255,255,0.12)";
+    roundRect(ctx, 64, barY, W - 128, 10, 5);
+    ctx.fill();
+    ctx.fillStyle = "#e94560";
+    roundRect(ctx, 64, barY, (W - 128) * progress, 10, 5);
+    ctx.fill();
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "600 18px -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Route timelapse", W / 2, barY - 16);
+    if (onProgress) onProgress((frameIndex + 1) / totalFrames);
+  }
+
+  // Prefer real MP4 (QuickTime-compatible) via WebCodecs
+  if (supportsWebCodecsMp4()) {
+    try {
+      const blob = await encodeCanvasMp4(canvas, paintFrame, {
+        width: W,
+        height: H,
+        fps,
+        totalFrames,
+      });
+      return { blob, mime: "video/mp4", ext: "mp4", meta };
+    } catch (err) {
+      console.warn("[story] WebCodecs MP4 failed, falling back:", err);
+    }
+  }
+
+  // Fallback: MediaRecorder (often WebM — may not open in QuickTime)
   const mime = pickRecorderMime();
-  const stream = canvas.captureStream(30);
+  const stream = canvas.captureStream(fps);
   const recorder = new MediaRecorder(stream, {
     mimeType: mime,
     videoBitsPerSecond: 6_000_000,
@@ -404,63 +455,19 @@ export async function recordStoryTimelapse(points, title, dateLabel, appUrl, onP
   recorder.ondataavailable = (e) => {
     if (e.data && e.data.size) chunks.push(e.data);
   };
-
   const done = new Promise((resolve, reject) => {
-    recorder.onstop = () => {
-      resolve(new Blob(chunks, { type: mime }));
-    };
+    recorder.onstop = () => resolve(new Blob(chunks, { type: mime }));
     recorder.onerror = () => reject(new Error("Recording failed"));
   });
-
   recorder.start(100);
 
-  const durationMs = 7000;
-  const holdMs = 900;
-  const start = performance.now();
-
-  await new Promise((resolve) => {
-    function frame(now) {
-      const t = now - start;
-      let progress;
-      if (t < durationMs) {
-        // ease-in-out
-        const u = t / durationMs;
-        progress = u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2;
-      } else {
-        progress = 1;
-      }
-
-      ctx.drawImage(bg, 0, 0);
-      ctx.save();
-      roundRectPath(ctx, mapX, mapY, mapW, mapH, 24);
-      ctx.clip();
-      drawRouteOnMap(ctx, points, toXY, progress);
-      ctx.restore();
-
-      // progress bar
-      const barY = H - 140;
-      ctx.fillStyle = "rgba(255,255,255,0.12)";
-      roundRect(ctx, 64, barY, W - 128, 10, 5);
-      ctx.fill();
-      ctx.fillStyle = "#e94560";
-      roundRect(ctx, 64, barY, (W - 128) * progress, 10, 5);
-      ctx.fill();
-      ctx.fillStyle = "#94a3b8";
-      ctx.font = "600 18px -apple-system, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("Route timelapse", W / 2, barY - 16);
-
-      if (onProgress) onProgress(Math.min(1, t / (durationMs + holdMs)));
-
-      if (t < durationMs + holdMs) {
-        requestAnimationFrame(frame);
-      } else {
-        resolve();
-      }
-    }
-    requestAnimationFrame(frame);
-  });
-
+  for (let i = 0; i < totalFrames; i++) {
+    paintFrame(i);
+    // let the capture pipeline grab the frame
+    await new Promise((r) => setTimeout(r, 1000 / fps));
+  }
+  // hold last frame a beat
+  await new Promise((r) => setTimeout(r, 200));
   recorder.stop();
   stream.getTracks().forEach((tr) => tr.stop());
   const blob = await done;
@@ -468,9 +475,106 @@ export async function recordStoryTimelapse(points, title, dateLabel, appUrl, onP
   return { blob, mime, ext, meta };
 }
 
+function supportsWebCodecsMp4() {
+  return (
+    typeof VideoEncoder !== "undefined" &&
+    typeof VideoFrame !== "undefined" &&
+    typeof VideoEncoder.isConfigSupported === "function"
+  );
+}
+
+/**
+ * Encode painted canvas frames to H.264 MP4 (plays in QuickTime / Photos / IG).
+ */
+async function encodeCanvasMp4(canvas, paintFrame, { width, height, fps, totalFrames }) {
+  const { Muxer, ArrayBufferTarget } = await import(
+    "https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/+esm"
+  );
+
+  // Prefer baseline/main profiles widely supported by QuickTime
+  const codecCandidates = [
+    "avc1.42001f", // Baseline 3.1
+    "avc1.4d001f", // Main 3.1
+    "avc1.64001f", // High 3.1
+  ];
+  let codec = null;
+  for (const c of codecCandidates) {
+    try {
+      const check = await VideoEncoder.isConfigSupported({
+        codec: c,
+        width,
+        height,
+        bitrate: 5_000_000,
+        framerate: fps,
+      });
+      if (check.supported) {
+        codec = c;
+        break;
+      }
+    } catch {
+      /* try next */
+    }
+  }
+  if (!codec) {
+    throw new Error("No H.264 VideoEncoder config supported");
+  }
+
+  const target = new ArrayBufferTarget();
+  const muxer = new Muxer({
+    target,
+    video: {
+      codec: "avc",
+      width,
+      height,
+    },
+    fastStart: "in-memory",
+    firstTimestampBehavior: "offset",
+  });
+
+  let encodeError = null;
+  const encoder = new VideoEncoder({
+    output: (chunk, meta) => {
+      muxer.addVideoChunk(chunk, meta);
+    },
+    error: (e) => {
+      encodeError = e;
+    },
+  });
+  encoder.configure({
+    codec,
+    width,
+    height,
+    bitrate: 5_000_000,
+    framerate: fps,
+    // hardware acceleration when available
+    hardwareAcceleration: "prefer-hardware",
+    avc: { format: "avc" },
+  });
+
+  const frameDuration = 1_000_000 / fps; // µs
+  for (let i = 0; i < totalFrames; i++) {
+    if (encodeError) throw encodeError;
+    paintFrame(i);
+    const frame = new VideoFrame(canvas, {
+      timestamp: Math.round(i * frameDuration),
+      duration: Math.round(frameDuration),
+    });
+    encoder.encode(frame, { keyFrame: i % fps === 0 });
+    frame.close();
+    // Yield so UI can update progress
+    if (i % 5 === 0) await new Promise((r) => setTimeout(r, 0));
+  }
+
+  await encoder.flush();
+  encoder.close();
+  muxer.finalize();
+  return new Blob([target.buffer], { type: "video/mp4" });
+}
+
 function pickRecorderMime() {
   const candidates = [
     "video/mp4",
+    "video/mp4;codecs=avc1",
     "video/webm;codecs=vp9",
     "video/webm;codecs=vp8",
     "video/webm",

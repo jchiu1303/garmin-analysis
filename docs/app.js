@@ -391,10 +391,11 @@ if (storyDl) {
       await copyText(shareCaption(meta, APP_URL));
       downloadBlob(blob, `${state.downloadSlug || "replay"}_story.${ext}`);
       storyDl.textContent = "Video downloaded";
-      setShareStatus(
-        `Story video saved (.${ext}). Caption copied. Upload to Instagram Stories.`,
-        ""
-      );
+      const tip =
+        ext === "mp4"
+          ? "MP4 saved — opens in QuickTime, Photos, and Instagram Stories."
+          : "Saved as WebM (this browser couldn’t make MP4). Open in Chrome/VLC, or convert for QuickTime.";
+      setShareStatus(`${tip} Caption copied.`, ext === "mp4" ? "" : "error");
     } catch (err) {
       console.error("[story-dl]", err);
       setShareStatus(errText(err), "error");
@@ -403,7 +404,7 @@ if (storyDl) {
       storyDl.disabled = false;
       posterDl.disabled = false;
       setTimeout(() => {
-        storyDl.textContent = "Download story timelapse video";
+        storyDl.textContent = "Download story timelapse (MP4)";
       }, 2500);
     }
   });
