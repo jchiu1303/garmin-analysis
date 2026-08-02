@@ -40,33 +40,59 @@ export function createReplay(POINTS) {
     padding: [40, 40],
   });
 
+  // --- Timeline chart (speed ± heart rate overlay) ---
   const chartCanvas = document.getElementById("speed-chart");
   const chartCursor = document.getElementById("chart-cursor");
-  const chartCursorDot = chartCursor.querySelector(".chart-cursor-dot");
+  const chartCursorDotSpeed = chartCursor.querySelector(".chart-cursor-dot-speed");
+  const chartCursorDotHr = chartCursor.querySelector(".chart-cursor-dot-hr");
+  const toggleSpeed = document.getElementById("toggle-speed");
+  const toggleHr = document.getElementById("toggle-hr");
   const chartCtx = chartCanvas.getContext("2d");
+
+  const HAS_HR = POINTS.some((p) => (p.hr || 0) > 0);
+  const maxSpeedRaw = Math.max(...POINTS.map((p) => p.speed), 1);
+  const maxHrRaw = Math.max(...POINTS.map((p) => p.hr || 0), 1);
   const CHART = {
     padL: 44,
     padR: 16,
     padT: 12,
     padB: 28,
-    maxSpeed: Math.ceil(Math.max(...POINTS.map((p) => p.speed)) + 1),
+    maxSpeed: Math.ceil(maxSpeedRaw + 1),
+    maxHr: Math.max(120, Math.ceil(maxHrRaw / 10) * 10 + 10),
   };
   let chartGeomCache = null;
+  let showSpeed = true;
+  let showHr = false;
+
+  if (toggleHr) {
+    if (!HAS_HR) {
+      toggleHr.disabled = true;
+      toggleHr.title = "No heart rate in this file";
+      const lab = toggleHr.closest("label");
+      if (lab) lab.title = "No heart rate in this file";
+    }
+    toggleHr.checked = false;
+  }
+  if (toggleSpeed) toggleSpeed.checked = true;
 
   function chartGeom() {
     const dpr = window.devicePixelRatio || 1;
     const rect = chartCanvas.getBoundingClientRect();
+    const padR = showHr ? 40 : 16;
     if (
       !chartGeomCache ||
       chartGeomCache.w !== rect.width ||
-      chartGeomCache.h !== rect.height
+      chartGeomCache.h !== rect.height ||
+      chartGeomCache.padR !== padR
     ) {
+      CHART.padR = padR;
       chartCanvas.width = rect.width * dpr;
       chartCanvas.height = rect.height * dpr;
       chartCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
       chartGeomCache = {
         w: rect.width,
         h: rect.height,
+        padR,
         plotW: rect.width - CHART.padL - CHART.padR,
         plotH: rect.height - CHART.padT - CHART.padB,
       };
@@ -83,8 +109,37 @@ export function createReplay(POINTS) {
     return CHART.padT + plotH - (speed / CHART.maxSpeed) * plotH;
   }
 
+  function hrToY(hr, plotH) {
+    return CHART.padT + plotH - (hr / CHART.maxHr) * plotH;
+  }
+
   function xToProgress(x, plotW) {
     return Math.max(0, Math.min(1, (x - CHART.padL) / plotW));
+  }
+
+  function drawSeries(getY, color, fill) {
+    const { plotW, plotH } = chartGeomCache;
+    if (fill) {
+      chartCtx.fillStyle = fill;
+      chartCtx.beginPath();
+      chartCtx.moveTo(progressToX(0, plotW), speedToY(0, plotH));
+      for (let i = 0; i < POINTS.length; i++) {
+        chartCtx.lineTo(progressToX(i / (POINTS.length - 1), plotW), getY(POINTS[i], plotH));
+      }
+      chartCtx.lineTo(progressToX(1, plotW), speedToY(0, plotH));
+      chartCtx.closePath();
+      chartCtx.fill();
+    }
+    chartCtx.strokeStyle = color;
+    chartCtx.lineWidth = 1.5;
+    chartCtx.beginPath();
+    for (let i = 0; i < POINTS.length; i++) {
+      const x = progressToX(i / (POINTS.length - 1), plotW);
+      const y = getY(POINTS[i], plotH);
+      if (i === 0) chartCtx.moveTo(x, y);
+      else chartCtx.lineTo(x, y);
+    }
+    chartCtx.stroke();
   }
 
   function drawChartBase() {
@@ -95,16 +150,42 @@ export function createReplay(POINTS) {
 
     chartCtx.strokeStyle = "#0f3460";
     chartCtx.lineWidth = 1;
-    for (let tick = 0; tick <= CHART.maxSpeed; tick += 4) {
-      const y = speedToY(tick, plotH);
-      chartCtx.beginPath();
-      chartCtx.moveTo(CHART.padL, y);
-      chartCtx.lineTo(CHART.padL + plotW, y);
-      chartCtx.stroke();
-      chartCtx.fillStyle = "#64748b";
+    if (showSpeed) {
+      for (let tick = 0; tick <= CHART.maxSpeed; tick += 4) {
+        const y = speedToY(tick, plotH);
+        chartCtx.beginPath();
+        chartCtx.moveTo(CHART.padL, y);
+        chartCtx.lineTo(CHART.padL + plotW, y);
+        chartCtx.stroke();
+        chartCtx.fillStyle = "#64748b";
+        chartCtx.font = "10px sans-serif";
+        chartCtx.textAlign = "right";
+        chartCtx.fillText(String(tick), CHART.padL - 6, y + 3);
+      }
+    } else if (showHr) {
+      const step = CHART.maxHr > 160 ? 20 : 10;
+      for (let tick = 0; tick <= CHART.maxHr; tick += step) {
+        const y = hrToY(tick, plotH);
+        chartCtx.beginPath();
+        chartCtx.moveTo(CHART.padL, y);
+        chartCtx.lineTo(CHART.padL + plotW, y);
+        chartCtx.stroke();
+        chartCtx.fillStyle = "#64748b";
+        chartCtx.font = "10px sans-serif";
+        chartCtx.textAlign = "right";
+        chartCtx.fillText(String(tick), CHART.padL - 6, y + 3);
+      }
+    }
+
+    if (showHr && showSpeed) {
+      const step = CHART.maxHr > 160 ? 20 : 10;
+      chartCtx.fillStyle = "#e94560";
       chartCtx.font = "10px sans-serif";
-      chartCtx.textAlign = "right";
-      chartCtx.fillText(String(tick), CHART.padL - 6, y + 3);
+      chartCtx.textAlign = "left";
+      for (let tick = 0; tick <= CHART.maxHr; tick += step) {
+        const y = hrToY(tick, plotH);
+        chartCtx.fillText(String(tick), CHART.padL + plotW + 6, y + 3);
+      }
     }
 
     const tickCount = 6;
@@ -119,44 +200,89 @@ export function createReplay(POINTS) {
       );
     }
 
-    chartCtx.fillStyle = "rgba(46, 204, 113, 0.12)";
-    chartCtx.beginPath();
-    chartCtx.moveTo(progressToX(0, plotW), speedToY(0, plotH));
-    for (let i = 0; i < POINTS.length; i++) {
-      chartCtx.lineTo(
-        progressToX(i / (POINTS.length - 1), plotW),
-        speedToY(POINTS[i].speed, plotH)
-      );
+    if (showSpeed) {
+      drawSeries((p, plotH) => speedToY(p.speed, plotH), "#2ecc71", "rgba(46, 204, 113, 0.12)");
     }
-    chartCtx.lineTo(progressToX(1, plotW), speedToY(0, plotH));
-    chartCtx.closePath();
-    chartCtx.fill();
-
-    chartCtx.strokeStyle = "#2ecc71";
-    chartCtx.lineWidth = 1.5;
-    chartCtx.beginPath();
-    for (let i = 0; i < POINTS.length; i++) {
-      const x = progressToX(i / (POINTS.length - 1), plotW);
-      const y = speedToY(POINTS[i].speed, plotH);
-      if (i === 0) chartCtx.moveTo(x, y);
-      else chartCtx.lineTo(x, y);
+    if (showHr && HAS_HR) {
+      drawSeries((p, plotH) => hrToY(p.hr || 0, plotH), "#e94560", null);
     }
-    chartCtx.stroke();
 
-    chartCtx.fillStyle = "#eee";
     chartCtx.font = "11px sans-serif";
     chartCtx.textAlign = "left";
-    chartCtx.fillText("km/h", 6, CHART.padT + 10);
+    if (showSpeed) {
+      chartCtx.fillStyle = "#2ecc71";
+      chartCtx.fillText("km/h", 6, CHART.padT + 10);
+    } else if (showHr) {
+      chartCtx.fillStyle = "#e94560";
+      chartCtx.fillText("bpm", 6, CHART.padT + 10);
+    }
+    if (showHr && showSpeed) {
+      chartCtx.fillStyle = "#e94560";
+      chartCtx.textAlign = "right";
+      chartCtx.fillText("bpm", w - 4, CHART.padT + 10);
+    }
     chartCtx.fillStyle = "#94a3b8";
+    chartCtx.textAlign = "left";
     chartCtx.fillText("HKT", CHART.padL + plotW / 2 - 10, h - 22);
+
+    if (!showSpeed && !showHr) {
+      chartCtx.fillStyle = "#94a3b8";
+      chartCtx.textAlign = "center";
+      chartCtx.fillText("Enable Speed and/or Heart rate above", CHART.padL + plotW / 2, CHART.padT + plotH / 2);
+    }
   }
 
-  function moveChartCursor(progress, speed) {
+  function redrawChart() {
+    chartGeomCache = null;
+    chartGeom();
+    const i = +slider.value;
+    const p = POINTS[i];
+    moveChartCursor(i / (POINTS.length - 1), p.speed, p.hr || 0);
+  }
+
+  function moveChartCursor(progress, speed, hr) {
     const { plotW, plotH } = chartGeom();
     chartCursor.style.transform = `translateX(${progressToX(progress, plotW)}px)`;
-    chartCursorDot.style.top = `${speedToY(speed, plotH)}px`;
+    if (chartCursorDotSpeed) {
+      chartCursorDotSpeed.hidden = !showSpeed;
+      if (showSpeed) chartCursorDotSpeed.style.top = `${speedToY(speed, plotH)}px`;
+    }
+    if (chartCursorDotHr) {
+      chartCursorDotHr.hidden = !(showHr && HAS_HR);
+      if (showHr && HAS_HR) chartCursorDotHr.style.top = `${hrToY(hr || 0, plotH)}px`;
+    }
   }
 
+  if (toggleSpeed) {
+    toggleSpeed.addEventListener("change", () => {
+      showSpeed = toggleSpeed.checked;
+      // Keep at least one series if HR available
+      if (!showSpeed && !showHr && HAS_HR) {
+        showHr = true;
+        if (toggleHr) toggleHr.checked = true;
+      } else if (!showSpeed && !HAS_HR) {
+        showSpeed = true;
+        toggleSpeed.checked = true;
+      }
+      redrawChart();
+    });
+  }
+  if (toggleHr) {
+    toggleHr.addEventListener("change", () => {
+      if (!HAS_HR) {
+        toggleHr.checked = false;
+        return;
+      }
+      showHr = toggleHr.checked;
+      if (!showSpeed && !showHr) {
+        showSpeed = true;
+        if (toggleSpeed) toggleSpeed.checked = true;
+      }
+      redrawChart();
+    });
+  }
+
+  // --- Playback state ---
   function stateAtElapsed(elapsed) {
     let lo = 0;
     let hi = POINTS.length - 1;
@@ -169,6 +295,8 @@ export function createReplay(POINTS) {
     const b = POINTS[Math.min(lo + 1, POINTS.length - 1)];
     const span = Math.max(b.elapsed - a.elapsed, 0.001);
     const frac = Math.max(0, Math.min(1, (elapsed - a.elapsed) / span));
+    const aHr = a.hr || 0;
+    const bHr = b.hr || 0;
     return {
       idx: lo,
       frac,
@@ -179,6 +307,7 @@ export function createReplay(POINTS) {
       speed: a.speed + (b.speed - a.speed) * frac,
       distance: a.distance + (b.distance - a.distance) * frac,
       cadence: frac < 0.5 ? a.cadence : b.cadence,
+      hr: aHr + (bHr - aHr) * frac,
       time: frac < 0.5 ? a.t : b.t,
     };
   }
@@ -226,7 +355,7 @@ export function createReplay(POINTS) {
     dot.setLatLng([state.lat, state.lon]);
     const badge = mapSpeedEl();
     if (badge) badge.textContent = `${state.speed.toFixed(1)} km/h`;
-    moveChartCursor(state.progress, state.speed);
+    moveChartCursor(state.progress, state.speed, state.hr || 0);
 
     if (syncSlider) slider.value = String(state.idx);
 
@@ -240,6 +369,11 @@ export function createReplay(POINTS) {
     document.getElementById("v-dist").textContent = (
       state.distance / 1000
     ).toFixed(2);
+    const hrEl = document.getElementById("v-hr");
+    if (hrEl) {
+      const hr = state.hr || 0;
+      hrEl.textContent = hr > 0 ? String(Math.round(hr)) : "—";
+    }
   }
 
   function update(i) {
@@ -257,6 +391,7 @@ export function createReplay(POINTS) {
         speed: p.speed,
         distance: p.distance,
         cadence: p.cadence,
+        hr: p.hr || 0,
         time: p.t,
       },
       true
@@ -376,9 +511,11 @@ export function createReplay(POINTS) {
   const onResize = () => {
     chartGeomCache = null;
     chartGeom();
+    const p = POINTS[+slider.value];
     moveChartCursor(
       +slider.value / (POINTS.length - 1),
-      POINTS[+slider.value].speed
+      p.speed,
+      p.hr || 0
     );
     map.invalidateSize();
   };

@@ -18,14 +18,19 @@
 </div>
 <div class="chart-wrap">
   <div class="chart-header">
-    <h2>Speed over time</h2>
-    <span>Space play/pause · ←→ step · 1–5 speed · click chart to jump</span>
+    <h2>Timeline</h2>
+    <div class="chart-toggles">
+      <label class="chart-toggle"><input type="checkbox" id="toggle-speed" checked> <span class="swatch swatch-speed"></span> Speed</label>
+      <label class="chart-toggle"><input type="checkbox" id="toggle-hr"> <span class="swatch swatch-hr"></span> Heart rate</label>
+    </div>
+    <span class="chart-hint">Space play/pause · ←→ step · 1–5 speed · click chart</span>
   </div>
   <div class="chart-stage">
     <canvas id="speed-chart"></canvas>
     <div id="chart-cursor">
       <div class="chart-cursor-line"></div>
-      <div class="chart-cursor-dot"></div>
+      <div class="chart-cursor-dot chart-cursor-dot-speed"></div>
+      <div class="chart-cursor-dot chart-cursor-dot-hr" hidden></div>
     </div>
   </div>
 </div>
@@ -33,6 +38,7 @@
   <div class="stats">
     <div class="stat"><div class="label">Time</div><div class="value" id="v-time">--:--:--</div></div>
     <div class="stat"><div class="label">Speed</div><div class="value" id="v-speed">0.0</div><div class="unit">km/h</div></div>
+    <div class="stat"><div class="label">Heart Rate</div><div class="value" id="v-hr">—</div><div class="unit">bpm</div></div>
     <div class="stat"><div class="label">Stroke Rate</div><div class="value" id="v-cadence">—</div><div class="unit">spm</div></div>
     <div class="stat"><div class="label">Distance</div><div class="value" id="v-dist">0.00</div><div class="unit">km</div></div>
   </div>

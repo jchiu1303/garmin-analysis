@@ -19,6 +19,7 @@ def _make_point(
     speed_kmh: float,
     cadence: int,
     distance_m: float,
+    hr: int = 0,
 ) -> dict:
     return {
         "t": time_str,
@@ -28,6 +29,7 @@ def _make_point(
         "speed": round(speed_kmh, 2),
         "cadence": cadence,
         "distance": round(distance_m, 1),
+        "hr": int(hr or 0),
     }
 
 
@@ -67,6 +69,7 @@ def load_points(fit_path: Path) -> list[dict]:
                 speed_kmh=speed_ms * 3.6,
                 cadence=fields.get("cadence") or 0,
                 distance_m=fields.get("distance") or 0,
+                hr=fields.get("heart_rate") or 0,
             )
         )
 
@@ -143,6 +146,8 @@ def demo_points(count: int = 360, duration_sec: float = 2400) -> list[dict]:
             distance_m += math.hypot(dlat, dlon)
 
         cadence = int(38 + 12 * abs(math.sin(frac * math.pi * 14))) if speed > 2 else 0
+        # Synthetic HR rises with effort (speed) for demo overlay
+        hr = int(95 + speed * 4.5 + 8 * abs(math.sin(frac * math.pi * 5)))
         points.append(
             _make_point(
                 time_str=timestamp.strftime("%H:%M:%S"),
@@ -152,6 +157,7 @@ def demo_points(count: int = 360, duration_sec: float = 2400) -> list[dict]:
                 speed_kmh=speed,
                 cadence=cadence,
                 distance_m=distance_m,
+                hr=hr,
             )
         )
 

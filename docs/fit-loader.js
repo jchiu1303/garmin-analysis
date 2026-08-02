@@ -89,6 +89,7 @@ export function recordsToPoints(data) {
     const speed = rec.enhanced_speed ?? rec.speed ?? 0;
     const cadence = rec.cadence ?? 0;
     const distance = rec.distance ?? 0;
+    const hr = rec.heart_rate ?? 0;
 
     points.push({
       t: formatHktTime(ts),
@@ -98,6 +99,7 @@ export function recordsToPoints(data) {
       speed: Math.round(Number(speed) * 100) / 100,
       cadence: Math.round(Number(cadence)) || 0,
       distance: Math.round(Number(distance) * 10) / 10,
+      hr: Math.round(Number(hr)) || 0,
     });
   }
 
@@ -257,6 +259,7 @@ export function demoPoints(count = 360, durationSec = 2400) {
 
     const cadence =
       speed > 2 ? Math.round(38 + 12 * Math.abs(Math.sin(frac * Math.PI * 14))) : 0;
+    const hr = Math.round(95 + speed * 4.5 + 8 * Math.abs(Math.sin(frac * Math.PI * 5)));
     points.push({
       t: formatHktTime(ts),
       elapsed: Math.round(elapsed * 10) / 10,
@@ -265,6 +268,7 @@ export function demoPoints(count = 360, durationSec = 2400) {
       speed: Math.round(speed * 100) / 100,
       cadence,
       distance: Math.round(distanceM * 10) / 10,
+      hr,
     });
   }
 

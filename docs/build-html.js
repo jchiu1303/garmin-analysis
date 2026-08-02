@@ -12,16 +12,25 @@ header span { font-size: 13px; color: #94a3b8; }
 .map-wrap { flex: 1; min-height: 0; position: relative; }
 #map { width: 100%; height: 100%; }
 .chart-wrap { background: #16213e; border-top: 1px solid #0f3460; padding: 12px 20px 8px; }
-.chart-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 10px; flex-wrap: wrap; }
 .chart-header h2 { font-size: 13px; font-weight: 600; color: #eee; }
-.chart-header span { font-size: 11px; color: #94a3b8; }
+.chart-hint { font-size: 11px; color: #94a3b8; }
+.chart-toggles { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.chart-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #cbd5e1; cursor: pointer; user-select: none; }
+.chart-toggle input { accent-color: #e94560; cursor: pointer; }
+.chart-toggle input:disabled { cursor: not-allowed; opacity: 0.5; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.swatch-speed { background: #2ecc71; }
+.swatch-hr { background: #e94560; }
 .chart-stage { position: relative; }
 #speed-chart { width: 100%; height: 160px; display: block; cursor: crosshair; }
 #chart-cursor { position: absolute; top: 0; left: 0; width: 0; height: 100%; pointer-events: none; will-change: transform; }
-.chart-cursor-line { position: absolute; top: 12px; bottom: 28px; left: -1px; width: 2px; background: #e94560; box-shadow: 0 0 6px rgba(233,69,96,0.5); }
-.chart-cursor-dot { position: absolute; left: -5px; width: 10px; height: 10px; border-radius: 50%; background: #e94560; border: 2px solid #fff; box-shadow: 0 0 6px rgba(233,69,96,0.6); transform: translateY(-50%); }
+.chart-cursor-line { position: absolute; top: 12px; bottom: 28px; left: -1px; width: 2px; background: #94a3b8; }
+.chart-cursor-dot { position: absolute; left: -5px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid #fff; transform: translateY(-50%); }
+.chart-cursor-dot-speed { background: #2ecc71; }
+.chart-cursor-dot-hr { background: #e94560; }
 .panel { background: #16213e; border-top: 1px solid #0f3460; padding: 16px 20px 20px; }
-.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+.stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
 .stat { background: #1a1a2e; border-radius: 8px; padding: 12px; text-align: center; }
 .stat .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
 .stat .value { font-size: 24px; font-weight: 700; margin-top: 4px; }
@@ -78,14 +87,19 @@ export async function buildReplayHtml(points, title, dateLabel) {
 </div>
 <div class="chart-wrap">
   <div class="chart-header">
-    <h2>Speed over time</h2>
-    <span>Space play/pause · ←→ step · 1–5 speed · click chart to jump</span>
+    <h2>Timeline</h2>
+    <div class="chart-toggles">
+      <label class="chart-toggle"><input type="checkbox" id="toggle-speed" checked> <span class="swatch swatch-speed"></span> Speed</label>
+      <label class="chart-toggle"><input type="checkbox" id="toggle-hr"> <span class="swatch swatch-hr"></span> Heart rate</label>
+    </div>
+    <span class="chart-hint">Space play/pause · ←→ step · 1–5 speed · click chart</span>
   </div>
   <div class="chart-stage">
     <canvas id="speed-chart"></canvas>
     <div id="chart-cursor">
       <div class="chart-cursor-line"></div>
-      <div class="chart-cursor-dot"></div>
+      <div class="chart-cursor-dot chart-cursor-dot-speed"></div>
+      <div class="chart-cursor-dot chart-cursor-dot-hr" hidden></div>
     </div>
   </div>
 </div>
@@ -93,6 +107,7 @@ export async function buildReplayHtml(points, title, dateLabel) {
   <div class="stats">
     <div class="stat"><div class="label">Time</div><div class="value" id="v-time">--:--:--</div></div>
     <div class="stat"><div class="label">Speed</div><div class="value" id="v-speed">0.0</div><div class="unit">km/h</div></div>
+    <div class="stat"><div class="label">Heart Rate</div><div class="value" id="v-hr">—</div><div class="unit">bpm</div></div>
     <div class="stat"><div class="label">Stroke Rate</div><div class="value" id="v-cadence">—</div><div class="unit">spm</div></div>
     <div class="stat"><div class="label">Distance</div><div class="value" id="v-dist">0.00</div><div class="unit">km</div></div>
   </div>
