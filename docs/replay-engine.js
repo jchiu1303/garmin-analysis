@@ -216,6 +216,8 @@ export function createReplay(POINTS) {
   let playbackRate = 1;
   let playStartWall = 0;
   let playStartElapsed = 0;
+  /** Exact session elapsed (seconds) for resume / scrub — not just slider index. */
+  let resumeElapsed = 0;
   let rafId = null;
   let lastStatsIdx = -1;
 
@@ -244,6 +246,7 @@ export function createReplay(POINTS) {
     const p = POINTS[i];
     lastStatsIdx = -1;
     resetTrailCache(i);
+    resumeElapsed = p.elapsed;
     applyState(
       {
         idx: i,
@@ -277,13 +280,15 @@ export function createReplay(POINTS) {
 
   function pause() {
     if (playing) {
-      const state = stateAtElapsed(elapsedNow());
+      const elapsed = elapsedNow();
+      const state = stateAtElapsed(elapsed);
       if (rafId) cancelAnimationFrame(rafId);
       rafId = null;
       setPlaying(false);
-      // Snap slider + visuals to the pause sample so ←/→ step from here
+      // Keep exact pause time + interpolated position (no snap-jump)
+      resumeElapsed = elapsed;
       slider.value = String(state.idx);
-      update(state.idx);
+      applyState(state, true);
       return;
     }
     if (rafId) cancelAnimationFrame(rafId);
@@ -292,10 +297,9 @@ export function createReplay(POINTS) {
   }
 
   function syncPlayAnchor() {
-    playStartElapsed = playing
-      ? elapsedNow()
-      : POINTS[+slider.value].elapsed;
+    playStartElapsed = playing ? elapsedNow() : resumeElapsed;
     playStartWall = performance.now();
+    if (playing) resumeElapsed = playStartElapsed;
   }
 
   function setPlaybackRate(rate) {
@@ -309,6 +313,7 @@ export function createReplay(POINTS) {
   function tick() {
     if (!playing) return;
     const elapsed = elapsedNow();
+    resumeElapsed = elapsed;
     if (elapsed >= SESSION_DURATION) {
       pause();
       update(POINTS.length - 1);
@@ -319,12 +324,14 @@ export function createReplay(POINTS) {
   }
 
   function play() {
-    if (+slider.value >= POINTS.length - 1) {
+    // At end → restart from beginning; otherwise resume exact pause/scrub time
+    if (resumeElapsed >= SESSION_DURATION - 1e-6) {
+      resumeElapsed = 0;
       slider.value = "0";
       update(0);
       playStartElapsed = 0;
     } else {
-      playStartElapsed = POINTS[+slider.value].elapsed;
+      playStartElapsed = resumeElapsed;
     }
     playStartWall = performance.now();
     lastStatsIdx = -1;
@@ -337,13 +344,14 @@ export function createReplay(POINTS) {
     if (playing) pause();
     const i = Math.max(0, Math.min(POINTS.length - 1, idx));
     slider.value = String(i);
-    update(i);
+    update(i); // sets resumeElapsed to that sample
   }
 
   /** Step ←/→ from the true current sample (pause anchor if mid-play). */
   function stepBy(delta) {
     if (playing) pause();
-    scrubTo(+slider.value + delta);
+    const base = stateAtElapsed(resumeElapsed).idx;
+    scrubTo(base + delta);
   }
 
   const onPlayClick = () => (playing ? pause() : play());
