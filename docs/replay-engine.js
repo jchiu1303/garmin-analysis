@@ -40,51 +40,84 @@ export function createReplay(POINTS) {
     padding: [40, 40],
   });
 
-  // --- Timeline chart (speed ± heart rate overlay) ---
+  // --- Timeline chart (speed / HR / stroke-rate overlays) ---
   const chartCanvas = document.getElementById("speed-chart");
   const chartCursor = document.getElementById("chart-cursor");
   const chartCursorDotSpeed = chartCursor.querySelector(".chart-cursor-dot-speed");
   const chartCursorDotHr = chartCursor.querySelector(".chart-cursor-dot-hr");
+  const chartCursorDotCadence = chartCursor.querySelector(".chart-cursor-dot-cadence");
   const toggleSpeed = document.getElementById("toggle-speed");
   const toggleHr = document.getElementById("toggle-hr");
+  const toggleCadence = document.getElementById("toggle-cadence");
   const chartCtx = chartCanvas.getContext("2d");
 
   const HAS_HR = POINTS.some((p) => Number(p.hr) > 0);
+  const HAS_CADENCE = POINTS.some((p) => Number(p.cadence) > 0);
   const maxSpeedRaw = Math.max(...POINTS.map((p) => p.speed), 1);
   const maxHrRaw = Math.max(...POINTS.map((p) => Number(p.hr) || 0), 1);
+  const maxCadRaw = Math.max(...POINTS.map((p) => Number(p.cadence) || 0), 1);
   const CHART = {
-    padL: 56, // room for vertical unit label + tick numbers
+    padL: 56,
     padR: 16,
     padT: 10,
     padB: 28,
     maxSpeed: Math.ceil(maxSpeedRaw + 1),
     maxHr: Math.max(120, Math.ceil(maxHrRaw / 10) * 10 + 10),
+    maxCadence: Math.max(40, Math.ceil(maxCadRaw / 10) * 10 + 10),
   };
   let chartGeomCache = null;
   let showSpeed = true;
-  // Default HR overlay ON when the file has bpm data
   let showHr = HAS_HR;
+  let showCadence = false;
+
+  function setupToggle(el, hasData, checked, onTitle, offTitle) {
+    if (!el) return;
+    el.disabled = !hasData;
+    el.checked = hasData && checked;
+    el.title = hasData ? onTitle : offTitle;
+    const lab = el.closest("label");
+    if (lab) {
+      lab.title = el.title;
+      lab.style.opacity = hasData ? "" : "0.55";
+    }
+  }
 
   if (toggleSpeed) toggleSpeed.checked = true;
-  if (toggleHr) {
-    toggleHr.disabled = !HAS_HR;
-    toggleHr.checked = HAS_HR;
-    toggleHr.title = HAS_HR
-      ? "Show heart rate on the chart"
-      : "No heart rate in this file";
-    const lab = toggleHr.closest("label");
-    if (lab) {
-      lab.title = toggleHr.title;
-      lab.style.opacity = HAS_HR ? "" : "0.55";
-    }
+  setupToggle(toggleHr, HAS_HR, HAS_HR, "Show heart rate on the chart", "No heart rate in this file");
+  setupToggle(
+    toggleCadence,
+    HAS_CADENCE,
+    false,
+    "Show stroke rate on the chart",
+    "No stroke rate in this file"
+  );
+
+  function anySeriesOn() {
+    return showSpeed || (showHr && HAS_HR) || (showCadence && HAS_CADENCE);
+  }
+
+  function ensureOneSeries() {
+    if (anySeriesOn()) return;
+    showSpeed = true;
+    if (toggleSpeed) toggleSpeed.checked = true;
+  }
+
+  /** Left axis prefers speed → HR → cadence. Right axis is the other metric when 2+ series. */
+  function axisRoles() {
+    const left = showSpeed ? "speed" : showHr && HAS_HR ? "hr" : showCadence && HAS_CADENCE ? "cadence" : null;
+    let right = null;
+    if (showSpeed && showHr && HAS_HR) right = "hr";
+    else if (showSpeed && showCadence && HAS_CADENCE && !(showHr && HAS_HR)) right = "cadence";
+    else if (!showSpeed && showHr && HAS_HR && showCadence && HAS_CADENCE) right = "cadence";
+    return { left, right };
   }
 
   function chartGeom() {
     const dpr = window.devicePixelRatio || 1;
     const rect = chartCanvas.getBoundingClientRect();
-    // Side pads: ticks + vertical unit label (rotated km/h / bpm)
-    const padR = showHr && showSpeed ? 56 : showHr ? 56 : 12;
-    const padL = 56;
+    const { left, right } = axisRoles();
+    const padR = right ? 56 : 12;
+    const padL = left ? 56 : 12;
     if (
       !chartGeomCache ||
       chartGeomCache.w !== rect.width ||
@@ -122,6 +155,16 @@ export function createReplay(POINTS) {
     return CHART.padT + plotH - (hr / CHART.maxHr) * plotH;
   }
 
+  function cadenceToY(cad, plotH) {
+    return CHART.padT + plotH - (cad / CHART.maxCadence) * plotH;
+  }
+
+  function seriesToY(kind, value, plotH) {
+    if (kind === "speed") return speedToY(value, plotH);
+    if (kind === "hr") return hrToY(value, plotH);
+    return cadenceToY(value, plotH);
+  }
+
   function xToProgress(x, plotW) {
     return Math.max(0, Math.min(1, (x - CHART.padL) / plotW));
   }
@@ -131,11 +174,11 @@ export function createReplay(POINTS) {
     if (fill) {
       chartCtx.fillStyle = fill;
       chartCtx.beginPath();
-      chartCtx.moveTo(progressToX(0, plotW), speedToY(0, plotH));
+      chartCtx.moveTo(progressToX(0, plotW), CHART.padT + plotH);
       for (let i = 0; i < POINTS.length; i++) {
         chartCtx.lineTo(progressToX(i / (POINTS.length - 1), plotW), getY(POINTS[i], plotH));
       }
-      chartCtx.lineTo(progressToX(1, plotW), speedToY(0, plotH));
+      chartCtx.lineTo(progressToX(1, plotW), CHART.padT + plotH);
       chartCtx.closePath();
       chartCtx.fill();
     }
@@ -151,7 +194,6 @@ export function createReplay(POINTS) {
     chartCtx.stroke();
   }
 
-  /** Draw a vertical axis unit label (reads bottom→top). */
   function drawVerticalUnit(text, x, yCenter, color) {
     chartCtx.save();
     chartCtx.fillStyle = color;
@@ -164,71 +206,76 @@ export function createReplay(POINTS) {
     chartCtx.restore();
   }
 
+  function drawAxisTicks(kind, side) {
+    const { plotW, plotH } = chartGeomCache;
+    const isLeft = side === "left";
+    let maxV;
+    let step;
+    let color;
+    if (kind === "speed") {
+      maxV = CHART.maxSpeed;
+      step = 4;
+      color = "#cbd5e1";
+    } else if (kind === "hr") {
+      maxV = CHART.maxHr;
+      step = maxV > 160 ? 20 : 10;
+      color = "#fda4af";
+    } else {
+      maxV = CHART.maxCadence;
+      step = maxV > 80 ? 20 : 10;
+      color = "#7dd3fc";
+    }
+    chartCtx.font = "11px -apple-system, BlinkMacSystemFont, sans-serif";
+    chartCtx.textBaseline = "middle";
+    chartCtx.fillStyle = color;
+    chartCtx.textAlign = isLeft ? "right" : "left";
+    for (let tick = 0; tick <= maxV; tick += step) {
+      const y = seriesToY(kind, tick, plotH);
+      if (isLeft && kind === "speed") {
+        chartCtx.strokeStyle = "rgba(15, 52, 96, 0.85)";
+        chartCtx.beginPath();
+        chartCtx.moveTo(CHART.padL, y);
+        chartCtx.lineTo(CHART.padL + plotW, y);
+        chartCtx.stroke();
+      } else if (isLeft && kind !== "speed") {
+        chartCtx.strokeStyle = "rgba(15, 52, 96, 0.85)";
+        chartCtx.beginPath();
+        chartCtx.moveTo(CHART.padL, y);
+        chartCtx.lineTo(CHART.padL + plotW, y);
+        chartCtx.stroke();
+      }
+      const x = isLeft ? CHART.padL - 10 : CHART.padL + plotW + 10;
+      chartCtx.fillText(String(tick), x, y);
+    }
+  }
+
   function drawChartBase() {
     const { w, h, plotW, plotH } = chartGeomCache;
     chartCtx.clearRect(0, 0, w, h);
 
-    // Plot background
     chartCtx.fillStyle = "#12122a";
     chartCtx.fillRect(CHART.padL, CHART.padT, plotW, plotH);
     chartCtx.strokeStyle = "#0f3460";
     chartCtx.lineWidth = 1;
     chartCtx.strokeRect(CHART.padL + 0.5, CHART.padT + 0.5, plotW - 1, plotH - 1);
 
-    chartCtx.font = "11px -apple-system, BlinkMacSystemFont, sans-serif";
-    chartCtx.textBaseline = "middle";
+    const { left, right } = axisRoles();
+    if (left) drawAxisTicks(left, "left");
+    if (right) drawAxisTicks(right, "right");
 
-    // Left axis ticks (speed, or HR if speed off) — numbers only
-    if (showSpeed) {
-      for (let tick = 0; tick <= CHART.maxSpeed; tick += 4) {
-        const y = speedToY(tick, plotH);
-        chartCtx.strokeStyle = "rgba(15, 52, 96, 0.85)";
-        chartCtx.beginPath();
-        chartCtx.moveTo(CHART.padL, y);
-        chartCtx.lineTo(CHART.padL + plotW, y);
-        chartCtx.stroke();
-        chartCtx.fillStyle = "#cbd5e1";
-        chartCtx.textAlign = "right";
-        chartCtx.fillText(String(tick), CHART.padL - 10, y);
-      }
-    } else if (showHr) {
-      const step = CHART.maxHr > 160 ? 20 : 10;
-      for (let tick = 0; tick <= CHART.maxHr; tick += step) {
-        const y = hrToY(tick, plotH);
-        chartCtx.strokeStyle = "rgba(15, 52, 96, 0.85)";
-        chartCtx.beginPath();
-        chartCtx.moveTo(CHART.padL, y);
-        chartCtx.lineTo(CHART.padL + plotW, y);
-        chartCtx.stroke();
-        chartCtx.fillStyle = "#fda4af";
-        chartCtx.textAlign = "right";
-        chartCtx.fillText(String(tick), CHART.padL - 10, y);
-      }
-    }
-
-    // Right axis ticks for HR when both are on
-    if (showHr && showSpeed) {
-      const step = CHART.maxHr > 160 ? 20 : 10;
-      chartCtx.fillStyle = "#fda4af";
-      chartCtx.textAlign = "left";
-      for (let tick = 0; tick <= CHART.maxHr; tick += step) {
-        const y = hrToY(tick, plotH);
-        chartCtx.fillText(String(tick), CHART.padL + plotW + 10, y);
-      }
-    }
-
-    // Vertical unit labels outside the tick column (no overlap with numbers)
     const midY = CHART.padT + plotH / 2;
-    if (showSpeed) {
-      drawVerticalUnit("km/h", 12, midY, "#86efac");
-    } else if (showHr) {
-      drawVerticalUnit("bpm", 12, midY, "#fda4af");
+    const unitMeta = {
+      speed: { label: "km/h", color: "#86efac" },
+      hr: { label: "bpm", color: "#fda4af" },
+      cadence: { label: "spm", color: "#7dd3fc" },
+    };
+    if (left && unitMeta[left]) {
+      drawVerticalUnit(unitMeta[left].label, 12, midY, unitMeta[left].color);
     }
-    if (showHr && showSpeed) {
-      drawVerticalUnit("bpm", w - 12, midY, "#fda4af");
+    if (right && unitMeta[right]) {
+      drawVerticalUnit(unitMeta[right].label, w - 12, midY, unitMeta[right].color);
     }
 
-    // Time axis
     const tickCount = 6;
     chartCtx.textAlign = "center";
     chartCtx.textBaseline = "alphabetic";
@@ -243,7 +290,6 @@ export function createReplay(POINTS) {
       );
     }
 
-    // Series (clip to plot so lines stay inside the frame)
     chartCtx.save();
     chartCtx.beginPath();
     chartCtx.rect(CHART.padL, CHART.padT, plotW, plotH);
@@ -254,15 +300,18 @@ export function createReplay(POINTS) {
     if (showHr && HAS_HR) {
       drawSeries((p, ph) => hrToY(p.hr || 0, ph), "#e94560", null);
     }
+    if (showCadence && HAS_CADENCE) {
+      drawSeries((p, ph) => cadenceToY(p.cadence || 0, ph), "#38bdf8", null);
+    }
     chartCtx.restore();
 
-    if (!showSpeed && !showHr) {
+    if (!anySeriesOn()) {
       chartCtx.fillStyle = "#94a3b8";
       chartCtx.textAlign = "center";
       chartCtx.textBaseline = "middle";
       chartCtx.font = "12px -apple-system, BlinkMacSystemFont, sans-serif";
       chartCtx.fillText(
-        "Enable Speed and/or Heart rate above",
+        "Enable Speed, Heart rate, and/or Stroke rate above",
         CHART.padL + plotW / 2,
         CHART.padT + plotH / 2
       );
@@ -274,10 +323,10 @@ export function createReplay(POINTS) {
     chartGeom();
     const i = +slider.value;
     const p = POINTS[i];
-    moveChartCursor(i / (POINTS.length - 1), p.speed, p.hr || 0);
+    moveChartCursor(i / (POINTS.length - 1), p.speed, p.hr || 0, p.cadence || 0);
   }
 
-  function moveChartCursor(progress, speed, hr) {
+  function moveChartCursor(progress, speed, hr, cadence) {
     const { plotW, plotH } = chartGeom();
     chartCursor.style.transform = `translateX(${progressToX(progress, plotW)}px)`;
     if (chartCursorDotSpeed) {
@@ -288,19 +337,19 @@ export function createReplay(POINTS) {
       chartCursorDotHr.hidden = !(showHr && HAS_HR);
       if (showHr && HAS_HR) chartCursorDotHr.style.top = `${hrToY(hr || 0, plotH)}px`;
     }
+    if (chartCursorDotCadence) {
+      chartCursorDotCadence.hidden = !(showCadence && HAS_CADENCE);
+      if (showCadence && HAS_CADENCE) {
+        chartCursorDotCadence.style.top = `${cadenceToY(cadence || 0, plotH)}px`;
+      }
+    }
   }
 
   if (toggleSpeed) {
     toggleSpeed.addEventListener("change", () => {
       showSpeed = toggleSpeed.checked;
-      // Keep at least one series if HR available
-      if (!showSpeed && !showHr && HAS_HR) {
-        showHr = true;
-        if (toggleHr) toggleHr.checked = true;
-      } else if (!showSpeed && !HAS_HR) {
-        showSpeed = true;
-        toggleSpeed.checked = true;
-      }
+      ensureOneSeries();
+      if (toggleSpeed) toggleSpeed.checked = showSpeed;
       redrawChart();
     });
   }
@@ -311,10 +360,20 @@ export function createReplay(POINTS) {
         return;
       }
       showHr = toggleHr.checked;
-      if (!showSpeed && !showHr) {
-        showSpeed = true;
-        if (toggleSpeed) toggleSpeed.checked = true;
+      ensureOneSeries();
+      if (toggleSpeed) toggleSpeed.checked = showSpeed;
+      redrawChart();
+    });
+  }
+  if (toggleCadence) {
+    toggleCadence.addEventListener("change", () => {
+      if (!HAS_CADENCE) {
+        toggleCadence.checked = false;
+        return;
       }
+      showCadence = toggleCadence.checked;
+      ensureOneSeries();
+      if (toggleSpeed) toggleSpeed.checked = showSpeed;
       redrawChart();
     });
   }
@@ -392,7 +451,7 @@ export function createReplay(POINTS) {
     dot.setLatLng([state.lat, state.lon]);
     const badge = mapSpeedEl();
     if (badge) badge.textContent = `${state.speed.toFixed(1)} km/h`;
-    moveChartCursor(state.progress, state.speed, state.hr || 0);
+    moveChartCursor(state.progress, state.speed, state.hr || 0, state.cadence || 0);
 
     if (syncSlider) slider.value = String(state.idx);
 
@@ -552,7 +611,8 @@ export function createReplay(POINTS) {
     moveChartCursor(
       +slider.value / (POINTS.length - 1),
       p.speed,
-      p.hr || 0
+      p.hr || 0,
+      p.cadence || 0
     );
     map.invalidateSize();
   };

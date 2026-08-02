@@ -22,6 +22,9 @@ header span { font-size: 13px; color: #94a3b8; }
 .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 .swatch-speed { background: #2ecc71; }
 .swatch-hr { background: #e94560; }
+.swatch-cadence { background: #38bdf8; }
+.chart-toggle:has(#toggle-cadence:checked) .unit-tag { color: #7dd3fc; }
+.chart-cursor-dot-cadence { background: #38bdf8; }
 .unit-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.03em; color: #94a3b8; margin-left: 2px; }
 .chart-toggle:has(#toggle-speed:checked) .unit-tag { color: #86efac; }
 .chart-toggle:has(#toggle-hr:checked) .unit-tag { color: #fda4af; }
@@ -94,6 +97,7 @@ export async function buildReplayHtml(points, title, dateLabel) {
     <div class="chart-toggles">
       <label class="chart-toggle"><input type="checkbox" id="toggle-speed" checked> <span class="swatch swatch-speed"></span> Speed <span class="unit-tag">km/h</span></label>
       <label class="chart-toggle"><input type="checkbox" id="toggle-hr"> <span class="swatch swatch-hr"></span> Heart rate <span class="unit-tag">bpm</span></label>
+      <label class="chart-toggle"><input type="checkbox" id="toggle-cadence"> <span class="swatch swatch-cadence"></span> Stroke rate <span class="unit-tag">spm</span></label>
     </div>
     <span class="chart-hint">Space play/pause · ←→ step · 1–5 speed · click chart</span>
   </div>
@@ -103,6 +107,7 @@ export async function buildReplayHtml(points, title, dateLabel) {
       <div class="chart-cursor-line"></div>
       <div class="chart-cursor-dot chart-cursor-dot-speed"></div>
       <div class="chart-cursor-dot chart-cursor-dot-hr" hidden></div>
+      <div class="chart-cursor-dot chart-cursor-dot-cadence" hidden></div>
     </div>
   </div>
 </div>
